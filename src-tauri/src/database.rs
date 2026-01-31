@@ -1,6 +1,6 @@
+use chrono;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
-use chrono; 
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PomodoroRecord {
@@ -34,10 +34,11 @@ impl Database {
     }
 
     pub fn log_action(&self, task_name: &str, action: &str, elapsed: u64, phase: u8) -> Result<()> {
+        let timestamp = chrono::Utc::now().timestamp();
         self.conn.execute(
-            "INSERT INTO pomodoro_sessions (task_name, action, elapsed, phase, timestamp) \
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            (&task_name, &action, &elapsed as &dyn rusqlite::ToSql, &phase as &dyn rusqlite::ToSql, &chrono::Utc::now().timestamp() as &dyn rusqlite::ToSql),
+            "INSERT INTO pomodoro_sessions (task_name, action, elapsed, phase, timestamp) 
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+            (task_name, action, elapsed as i64, phase as i32, timestamp),
         )?;
         Ok(())
     }
@@ -45,36 +46,42 @@ impl Database {
     pub fn get_recent(&self, limit: i64) -> Result<Vec<PomodoroRecord>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, task_name, action, elapsed, phase, timestamp \
-             FROM pomodoro_sessions ORDER BY timestamp DESC LIMIT ?1"
+             FROM pomodoro_sessions ORDER BY timestamp DESC LIMIT ?1",
         )?;
-        let records = stmt.query_map([&limit], |row| {
-            Ok(PomodoroRecord {
-                id: row.get(0)?,
-                task_name: row.get(1)?,
-                action: row.get(2)?,
-                elapsed: row.get(3)?,
-                phase: row.get(4)?,
-                timestamp: row.get(5)?,
-            })
-        })?.filter_map(Result::ok).collect();
+        let records = stmt
+            .query_map([&limit], |row| {
+                Ok(PomodoroRecord {
+                    id: row.get(0)?,
+                    task_name: row.get(1)?,
+                    action: row.get(2)?,
+                    elapsed: row.get(3)?,
+                    phase: row.get(4)?,
+                    timestamp: row.get(5)?,
+                })
+            })?
+            .filter_map(Result::ok)
+            .collect();
         Ok(records)
     }
 
     pub fn get_all(&self) -> Result<Vec<PomodoroRecord>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, task_name, action, elapsed, phase, timestamp \
-             FROM pomodoro_sessions ORDER BY timestamp DESC"
+             FROM pomodoro_sessions ORDER BY timestamp DESC",
         )?;
-        let records = stmt.query_map([], |row| {
-            Ok(PomodoroRecord {
-                id: row.get(0)?,
-                task_name: row.get(1)?,
-                action: row.get(2)?,
-                elapsed: row.get(3)?,
-                phase: row.get(4)?,
-                timestamp: row.get(5)?,
-            })
-        })?.filter_map(Result::ok).collect();
+        let records = stmt
+            .query_map([], |row| {
+                Ok(PomodoroRecord {
+                    id: row.get(0)?,
+                    task_name: row.get(1)?,
+                    action: row.get(2)?,
+                    elapsed: row.get(3)?,
+                    phase: row.get(4)?,
+                    timestamp: row.get(5)?,
+                })
+            })?
+            .filter_map(Result::ok)
+            .collect();
         Ok(records)
     }
 }

@@ -18,7 +18,25 @@
       }
     ],
     "security": {
-      "capabilities": ["default"]
+      "capabilities": [
+        "default",
+         {
+          "identifier": "main-capability",
+          "description": "Code Chrono permissions",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "dialog:default",
+            "dialog:allow-save",
+            "dialog:allow-message",
+            "fs:allow-write-text-file",
+            {
+              "identifier": "fs:allow-app-write",
+              "allow": [{ "path": "$APPDATA/**" }]
+            }
+          ]
+        }
+      ]
     }
   },
   "bundle": {

@@ -5,7 +5,7 @@
   import { writeTextFile } from "@tauri-apps/plugin-fs";
   import { onMount, onDestroy } from "svelte";
 
-  console.log('Svelte component loaded');
+  console.log("Svelte component loaded");
 
   type TimerState = {
     remaining: number;
@@ -22,6 +22,10 @@
   let taskName = "";
   let showTaskInput = true;
 
+  $: minutes = Math.floor(remaining / 60)
+    .toString()
+    .padStart(2, "0");
+  $: seconds = (remaining % 60).toString().padStart(2, "0");
   $: isRunning = !paused && remaining > 0;
 
   let unlisten: UnlistenFn | null = null;
@@ -66,255 +70,289 @@
   async function resetTimer() {
     await invoke("reset_timer");
     remaining = 1500;
-    paused = false;
+    paused = true;
     phase = "Work";
     hasStarted = false;
+    taskName = "";
     showTaskInput = true;
   }
 
   async function exportCSV() {
-    console.log('Export CSV button clicked!');
+    console.log("Export CSV button clicked!");
     try {
-      console.log('Starting CSV export...');
+      console.log("Starting CSV export...");
       const csv = await invoke<string>("export_csv");
-      console.log('CSV data received:', csv.substring(0, 100) + '...');
+      console.log("CSV data received:", csv.substring(0, 100) + "...");
       const filePath = await save({
-        filters: [{
-          name: 'CSV',
-          extensions: ['csv']
-        }]
+        filters: [
+          {
+            name: "CSV",
+            extensions: ["csv"],
+          },
+        ],
       });
-      console.log('File path selected:', filePath);
+      console.log("File path selected:", filePath);
       if (filePath) {
         await writeTextFile(filePath, csv);
-        console.log('File written successfully');
+        console.log("File written successfully");
       } else {
-        console.log('No file path selected');
+        console.log("No file path selected");
       }
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export CSV: ' + error);
+      console.error("Export failed:", error);
+      alert("Failed to export CSV: " + error);
     }
   }
 </script>
 
-<main class="container">
-  <h1>Code Chrono ⏱️</h1>
-
-  <!-- NEW: Task Input Section -->
-  {#if showTaskInput}
-    <div class="task-section">
-      <label for="task-input" class="task-label">Current Task:</label>
-      <div class="task-input-wrapper">
-        <input
-          id="task-input"
-          bind:value={taskName}
-          type="text"
-          placeholder="What are you working on?"
-          class="task-input"
-          class:task-input--disabled={isRunning}
-          disabled={isRunning}
-          maxlength="100"
-        />
-        {#if isRunning}
-          <span class="task-lock-icon">🔒</span>
-        {/if}
+<main>
+  <div class="timer">
+    <div class="display">
+      <div class="time">
+        {minutes}:{seconds}
       </div>
+      <div class="phase">{phase}</div>
     </div>
-  {/if}
 
-  <div class="timer-display">
-    <div class="time">
-      {Math.floor(remaining / 60)
-        .toString()
-        .padStart(2, "0")}:
-      {(remaining % 60).toString().padStart(2, "0")}
+    <div class="task">
+      <input
+        bind:value={taskName}
+        type="text"
+        placeholder="Task name"
+        class:running={isRunning}
+        maxlength="50"
+        disabled={isRunning}
+      />
     </div>
-    <div class="phase">{phase}</div>
-    {#if taskName}
-      <div class="current-task">📝 {taskName}</div>
-    {/if}
-    <div class="status">{paused ? "⏸️ Paused" : "▶️ Running"}</div>
-  </div>
 
-  <div class="controls">
-    {#if !hasStarted || remaining === 0}
-      <button class="btn btn-start" on:click={startPomodoro}>
-        Start Pomodoro (25min)
-      </button>
-    {/if}
+    <div class="status">
+      {paused ? "⏸️ Paused" : isRunning ? "▶️ Running" : "⏹️ Stopped"}
+    </div>
 
-    {#if hasStarted && remaining > 0}
-      <button class="btn btn-pause" on:click={togglePause}>
-        {paused ? "▶️ Resume" : "⏸️ Pause"}
-      </button>
-    {/if}
+    <div class="buttons">
+      {#if !hasStarted || remaining === 0}
+        <button class="start" on:click={startPomodoro}>▶️</button>
+      {:else if hasStarted && remaining > 0}
+        <div class="control-buttons">
+          <button class="pause" on:click={togglePause}>
+            {paused ? "▶️" : "⏸️"}
+          </button>
+          <button class="reset" on:click={resetTimer}>🔄</button>
+        </div>
+      {/if}
 
-    <button class="btn btn-reset" on:click={resetTimer}>
-      🔄 Reset
-    </button>
-
-    <button class="btn btn-export" on:click={exportCSV}>
-      📊 Export CSV
-    </button>
+      <button class="export" on:click={exportCSV}>📊</button>
+    </div>
   </div>
 </main>
 
 <style>
-  .container {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #ffffff;
-    min-height: 100vh;
-  }
-
-  h1 {
-    color: #1a1a1a;
-    margin-bottom: 1rem;
-    font-weight: 600;
-  }
-
-  /* Task Styles */
-  .task-section {
-    margin-bottom: 2rem;
-    text-align: left;
-  }
-
-  .task-label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #666;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .task-input-wrapper {
-    position: relative;
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    background: radial-gradient(
+      circle at 20% 80%,
+      #1e3a8a 0%,
+      #1e1b4b 50%,
+      #0f0f23 100%
+    );
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     display: flex;
     align-items: center;
+    justify-content: center;
   }
 
-  .task-input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.2s ease;
-    background: white;
+  main {
+    width: 100%;
+    max-width: 340px;
+    padding: 1rem;
   }
 
-  .task-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  .timer {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 28px;
+    padding: 1.75rem 1.25rem;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+    text-align: center;
+    overflow: hidden;
   }
 
-  .task-input--disabled {
-    background: #f9fafb;
-    color: #6b7280;
-    cursor: not-allowed;
-  }
-
-  .task-lock-icon {
-    margin-left: 0.75rem;
-    font-size: 1.2rem;
-    opacity: 0.6;
-  }
-
-  .current-task {
-    font-size: 1.1rem;
-    color: #374151;
-    font-weight: 500;
-    margin: 0.5rem 0;
-    padding: 0.25rem 0.75rem;
-    background: #f3f4f6;
-    border-radius: 6px;
-    border-left: 3px solid #3b82f6;
-  }
-
-  .timer-display {
-    margin: 2rem 0 3rem;
+  .display {
+    margin-bottom: 1.25rem;
   }
 
   .time {
-    font-size: 6rem;
-    font-weight: 300;
-    font-family: monospace;
-    color: #1f2937;
-    margin-bottom: 1rem;
+    font-size: 3.75rem;
+    font-weight: 200;
+    font-family: "SF Mono", Monaco, "Roboto Mono", monospace;
+    background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.125rem;
+    letter-spacing: 0;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .phase {
-    font-size: 1.5rem;
-    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(156, 163, 175, 0.8);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0.5rem;
+    letter-spacing: 1.5px;
+    line-height: 1;
+  }
+
+  .task {
+    margin: 1.25rem 0 1rem 0;
+    padding: 0 0.125rem;
+  }
+
+  .task input {
+    width: 100%;
+    padding: 0.6875rem 0.75rem;
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    background: rgba(30, 41, 59, 0.6);
+    color: #f8fafc;
+    text-align: center;
+    backdrop-filter: blur(20px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+  }
+
+  .task input::placeholder {
+    color: rgba(148, 163, 184, 0.6);
+  }
+
+  .task input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    background: rgba(30, 41, 59, 0.8);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+
+  .task input.running {
+    background: rgba(71, 85, 105, 0.4);
+    color: rgba(156, 163, 175, 0.7);
+    border-color: rgba(71, 85, 105, 0.3);
   }
 
   .status {
-    font-size: 1.2rem;
-    color: #9ca3af;
-  }
-
-  .controls {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.75rem;
+    color: rgba(148, 163, 175, 0.8);
+    margin-bottom: 1.5rem;
     font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 0.625rem;
+    justify-content: center;
+    padding-top: 0.25rem;
+  }
+
+  button {
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.125rem;
     cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 120px;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    backdrop-filter: blur(20px);
   }
 
-  .btn-start {
-    background: #3b82f6;
+  .start {
+    width: 52px;
+    height: 52px;
+    font-size: 1.125rem;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
     color: white;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
   }
 
-  .btn-start:hover:not(:disabled) {
-    background: #2563eb;
+  .start:hover:not(:active) {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 28px rgba(16, 185, 129, 0.45);
   }
 
-  .btn-pause {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
+  .start:active {
+    transform: scale(0.97);
   }
 
-  .btn-pause:hover:not(:disabled) {
-    background: #e5e7eb;
+  .pause {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
   }
 
-  .btn-reset {
-    background: #ef4444;
-    color: white;
+  .pause:hover:not(:active) {
+    background: rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
   }
 
-  .btn-reset:hover:not(:disabled) {
-    background: #dc2626;
+  .reset {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
   }
 
-  .btn-export {
-    background: #10b981;
-    color: white;
+  .reset:hover:not(:active) {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
   }
 
-  .btn-export:hover:not(:disabled) {
-    background: #059669;
+  .export {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+  }
+
+  .export:hover:not(:active) {
+    background: rgba(251, 191, 36, 0.3);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 420px) {
+    main {
+      padding: 0.75rem;
+    }
+
+    .timer {
+      padding: 1.5rem 1rem;
+    }
+
+    .time {
+      font-size: 3.25rem;
+    }
+
+    button {
+      width: 48px;
+      height: 48px;
+    }
+
+    .start {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .control-buttons {
+    display: flex;
+    gap: 0.625rem;
   }
 </style>

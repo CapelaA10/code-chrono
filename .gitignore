@@ -8,6 +8,9 @@ node_modules/
 dist/
 build/
 
+# Cargo
+.src-tauri/Cargo.lock
+
 # Svelte
 .svelte-kit/
 .svelte-kit.output/
