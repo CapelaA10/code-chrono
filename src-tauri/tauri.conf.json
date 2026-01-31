@@ -1,0 +1,29 @@
+{
+  "productName": "Code Chrono",
+  "version": "0.1.0",
+  "identifier": "com.codechrono.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Code Chrono",
+        "width": 800,
+        "height": 600,
+        "label": "main"
+      }
+    ],
+    "security": {
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  },
+  "plugins": {}
+}

@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build
+/src-tauri/target/
+dist/
+build/
+
+# Svelte
+.svelte-kit/
+.svelte-kit.output/
+.svelte-kit/types/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Tauri
+apps/
+capacitor-cordova/
+src-tauri/target/
+src-tauri/tauri.conf.json.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Rust / Cargo
+Cargo.lock  # Optional: commit for reproducibility
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*~
+!.env.example
