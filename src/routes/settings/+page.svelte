@@ -1,7 +1,8 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { save, open } from "@tauri-apps/plugin-dialog";
+  import { save, open, ask } from "@tauri-apps/plugin-dialog";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
+  import { onMount } from "svelte";
   import Icons from "$lib/components/Icons.svelte";
   import { theme } from "$lib/stores/theme";
   import { idleMinutes } from "$lib/stores/idle";
@@ -11,8 +12,14 @@
   let clearBusy = false;
   let message = "";
 
-  $: isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  $: isMac =
+    typeof navigator !== "undefined" &&
+    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   $: hotkeyLabel = isMac ? "⌘⇧P" : "Ctrl+Shift+P";
+
+  onMount(() => {
+    message = "";
+  });
 
   async function exportCSV() {
     exportBusy = true;
@@ -52,17 +59,44 @@
     }
   }
 
+  let isConfirming = false;
+
   async function clearAllData() {
-    const ok = confirm(
-      "Clear all session data? This cannot be undone. Your timer will not be affected."
-    );
-    if (!ok) return;
-    clearBusy = true;
+    if (clearBusy || isConfirming) {
+      console.log("clearAllData blocked: busy or already confirming");
+      return;
+    }
+
+    isConfirming = true;
+
     message = "";
+    console.log("Message cleared, about to show confirm dialog");
+
+    const ok = await ask(
+      "Clear all session data? This cannot be undone. Your timer will not be affected.",
+      {
+        title: "Confirm deletion",
+        kind: "warning",
+      },
+    );
+
+    console.log("User response:", ok);
+
+    isConfirming = false;
+
+    if (!ok) {
+      console.log("User cancelled, exiting");
+      return;
+    }
+
+    console.log("User confirmed, proceeding with deletion");
+    clearBusy = true;
     try {
       await invoke("reset_database");
+      console.log("Database cleared successfully");
       message = "All session data cleared.";
     } catch (error) {
+      console.error("Failed to clear database:", error);
       message = "Failed to clear data: " + error;
     } finally {
       clearBusy = false;
@@ -117,14 +151,17 @@
 
     <section class="section">
       <h2 class="section-title">Idle detection</h2>
-      <p class="hint">Pause timer after this many minutes with the window hidden (0 = off).</p>
+      <p class="hint">
+        Pause timer after this many minutes with the window hidden (0 = off).
+      </p>
       <div class="idle-row">
         <input
           type="number"
           min="0"
           max="60"
           value={$idleMinutes}
-          on:input={(e) => setIdleMinutes(Number((e.currentTarget as HTMLInputElement).value))}
+          on:input={(e) =>
+            setIdleMinutes(Number((e.currentTarget as HTMLInputElement).value))}
           class="idle-input"
         />
         <span class="idle-suffix">min</span>
@@ -134,19 +171,11 @@
     <section class="section">
       <h2 class="section-title">Data</h2>
       <div class="buttons">
-        <button
-          class="btn export"
-          on:click={exportCSV}
-          disabled={exportBusy}
-        >
+        <button class="btn export" on:click={exportCSV} disabled={exportBusy}>
           <Icons name="download" size={18} className="btn-icon" />
           {exportBusy ? "…" : "Export CSV"}
         </button>
-        <button
-          class="btn import"
-          on:click={importCSV}
-          disabled={importBusy}
-        >
+        <button class="btn import" on:click={importCSV} disabled={importBusy}>
           <Icons name="upload" size={18} className="btn-icon" />
           {importBusy ? "…" : "Import CSV"}
         </button>
@@ -156,12 +185,13 @@
     <section class="section danger">
       <h2 class="section-title">Danger zone</h2>
       <p class="hint">
-        Reset database deletes all saved sessions. The current timer is not affected.
+        Reset database deletes all saved sessions. The current timer is not
+        affected.
       </p>
       <button
         class="btn clear"
         on:click={clearAllData}
-        disabled={clearBusy}
+        disabled={clearBusy || isConfirming}
       >
         <Icons name="trash2" size={18} className="btn-icon" />
         {clearBusy ? "…" : "Clear all data"}
@@ -196,7 +226,8 @@
     padding: 0;
     min-height: 100vh;
     background: var(--bg-page);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -283,7 +314,10 @@
     background: var(--bg-card);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s;
   }
 
   .theme-btn:hover {
@@ -355,7 +389,10 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
     background: var(--bg-card);
     color: var(--btn-secondary-text);
   }

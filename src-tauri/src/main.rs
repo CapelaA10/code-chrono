@@ -24,7 +24,7 @@ fn main() {
             app.manage(db);
             Ok(())
         })
-        .manage(Arc::new(Mutex::new(code_chrono_lib::commands::TimerState::default())))  // Use lib
+        .manage(Arc::new(Mutex::new(code_chrono_lib::commands::TimerState::default())))
         .invoke_handler(get_invoke_handler())
         .run(tauri::generate_context!())
         .expect("error running Code Chrono");

@@ -10,10 +10,11 @@
     remaining: number;
     paused: boolean;
     phase: number;
+    task_active: boolean;
   };
 
-  let remaining = 1500;
-  let paused = false;
+  let remaining = 0;  // Initialize to 0, will be set from backend
+  let paused = true;
   let phase = "Work";
   let hasStarted = false;
   let isRunning = false;
@@ -21,7 +22,7 @@
   let recentTasks: string[] = [];
   let idleTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  $: isRunning = !paused && remaining > 0;
+  $: isRunning = !paused && remaining > 0 && hasStarted;
 
   let unlisten: UnlistenFn | null = null;
 
@@ -29,7 +30,12 @@
     remaining = state.remaining;
     paused = state.paused;
     phase = state.phase === 0 ? "Work" : "Break";
-    if (state.remaining > 0 && !hasStarted) hasStarted = true;
+    
+    if (state.task_active) {
+      hasStarted = true;
+    } else if (state.remaining === 1500 && !state.task_active) {
+      hasStarted = false;
+    }
   }
 
   function clearIdleTimeout() {
@@ -66,15 +72,31 @@
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     try {
-      recentTasks = await invoke<string[]>("get_unique_task_names", { limit: 10 });
+      const tasks = await invoke<string[]>("get_unique_task_names", { limit: 10 });
+      recentTasks = tasks.filter(task => task && task.trim().length > 0);
     } catch (_) {
       recentTasks = [];
     }
   });
 
   async function onShortcutPause() {
-    const updated = await invoke<TimerState>("get_timer");
-    syncFromBackend(updated);
+    try {
+      if (!hasStarted || remaining === 0) {
+        console.log("Shortcut: Starting timer");
+        await startPomodoro();
+        return;
+      }
+
+      if (!taskName) {
+        console.log("Shortcut pause ignored: no task name");
+        return;
+      }
+
+      console.log("Shortcut: Toggling pause");
+      await togglePause();
+    } catch (e) {
+      console.error("Shortcut pause error:", e);
+    }
   }
 
   function onVisibilityChange() {
@@ -93,28 +115,40 @@
     clearIdleTimeout();
   });
 
-  async function startPomodoro() {
-    await invoke("start_pomodoro", { taskName });
-    hasStarted = true;
-    scheduleIdlePause();
+  async function startPomodoro(durationMinutes?: number) {
+    try {
+      await invoke("start_pomodoro", { taskName, durationMinutes });
+      hasStarted = true;
+      scheduleIdlePause();
+    } catch (e) {
+      console.error("Start pomodoro error:", e);
+    }
   }
 
   async function togglePause() {
-    await invoke("pause_timer", { taskName });
-    const updated = await invoke<TimerState>("get_timer");
-    syncFromBackend(updated);
-    clearIdleTimeout();
-    if (updated.paused === false) scheduleIdlePause();
+    try {
+      await invoke("pause_timer", { taskName });
+      const updated = await invoke<TimerState>("get_timer");
+      syncFromBackend(updated);
+      clearIdleTimeout();
+      if (updated.paused === false) scheduleIdlePause();
+    } catch (e) {
+      console.error("Toggle pause error:", e);
+    }
   }
 
   async function resetTimer() {
-    await invoke("reset_timer");
-    remaining = 1500;
-    paused = true;
-    phase = "Work";
-    hasStarted = false;
-    taskName = "";
-    clearIdleTimeout();
+    try {
+      await invoke("reset_timer", { taskName });
+      remaining = 1500;
+      paused = true;
+      phase = "Work";
+      hasStarted = false;
+      taskName = "";
+      clearIdleTimeout();
+    } catch (e) {
+      console.error("Reset timer error:", e);
+    }
   }
 </script>
 

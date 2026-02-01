@@ -1,11 +1,33 @@
 pub mod commands;
 pub mod database;
 
-pub use commands::api::{start_pomodoro, pause_timer, get_timer, reset_timer, export_csv, import_csv, reset_database, get_unique_task_names};
+pub use commands::api::{
+    export_csv, 
+    get_timer, 
+    get_unique_task_names, 
+    import_csv, 
+    pause_timer, 
+    reset_database,
+    reset_timer, 
+    start_pomodoro,
+    get_task_stats,
+    get_daily_breakdown
+};
 pub use database::Database;
 
 use tauri::ipc::Invoke;
 
 pub fn get_invoke_handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
-    tauri::generate_handler![start_pomodoro, pause_timer, get_timer, reset_timer, export_csv, import_csv, reset_database, get_unique_task_names]
+    tauri::generate_handler![
+        start_pomodoro,
+        pause_timer,
+        get_timer,
+        reset_timer,
+        export_csv,
+        import_csv,
+        reset_database,
+        get_unique_task_names,
+        get_task_stats,
+        get_daily_breakdown
+    ]
 }

@@ -9,9 +9,12 @@
   export let isRunning = false;
   export let taskName = "";
   export let recentTasks: string[] = [];
-  export let onStart: () => void = () => {};
+  export let onStart: (duration?: number) => void = () => {};
   export let onPause: () => void = () => {};
   export let onReset: () => void = () => {};
+
+  let selectedDuration: "25" | "45" | "60" | "custom" = "25";
+  let customDuration = "";
 
   $: minutes = Math.floor(remaining / 60)
     .toString()
@@ -23,12 +26,34 @@
   function pickTask(name: string) {
     taskName = name;
   }
+
+  function handleStart() {
+    let durationMinutes: number | undefined;
+    
+    if (selectedDuration === "custom") {
+      const parsed = parseInt(customDuration);
+      if (!isNaN(parsed) && parsed > 0) {
+        durationMinutes = parsed;
+      } else {
+        durationMinutes = 25; // fallback
+      }
+    } else {
+      durationMinutes = parseInt(selectedDuration);
+    }
+    
+    onStart(durationMinutes);
+  }
 </script>
 
 <div class="timer">
-  <a href="/settings" class="settings-link" title="Settings">
-    <Icons name="settings" size={20} />
-  </a>
+  <div class="top-nav">
+    <a href="/stats" class="nav-link" title="Statistics">
+      <Icons name="bar-chart" size={20} />
+    </a>
+    <a href="/settings" class="nav-link" title="Settings">
+      <Icons name="settings" size={20} />
+    </a>
+  </div>
   <div class="display">
     <div class="time">{minutes}:{seconds}</div>
     <div class="phase">{phase}</div>
@@ -47,27 +72,85 @@
       <div class="recent-tasks">
         <span class="recent-label">Recent:</span>
         {#each recentTasks as name (name)}
-          {#if name.trim() !== ""}
-            <button
-              type="button"
-              class="task-chip"
-              on:click={() => pickTask(name)}
-            >
-              {name}
-            </button>
-          {/if}
+          <button
+            type="button"
+            class="task-chip"
+            on:click={() => pickTask(name)}
+          >
+            {name}
+          </button>
         {/each}
       </div>
     {/if}
   </div>
 
   <div class="status">
-    {paused ? "Paused" : isRunning ? "Running" : "Stopped"}
+    {#if !hasStarted}
+      Ready
+    {:else if paused}
+      Paused
+    {:else if isRunning}
+      Running
+    {:else}
+      Stopped
+    {/if}
   </div>
+
+  {#if !hasStarted || remaining === 0}
+    <div class="duration-selector">
+      <label class="duration-label">Session duration</label>
+      <div class="duration-options">
+        <button
+          type="button"
+          class="duration-btn"
+          class:active={selectedDuration === "25"}
+          on:click={() => selectedDuration = "25"}
+        >
+          25 min
+        </button>
+        <button
+          type="button"
+          class="duration-btn"
+          class:active={selectedDuration === "45"}
+          on:click={() => selectedDuration = "45"}
+        >
+          45 min
+        </button>
+        <button
+          type="button"
+          class="duration-btn"
+          class:active={selectedDuration === "60"}
+          on:click={() => selectedDuration = "60"}
+        >
+          60 min
+        </button>
+        <button
+          type="button"
+          class="duration-btn"
+          class:active={selectedDuration === "custom"}
+          on:click={() => selectedDuration = "custom"}
+        >
+          Custom
+        </button>
+      </div>
+      {#if selectedDuration === "custom"}
+        <div class="custom-duration">
+          <input
+            type="number"
+            bind:value={customDuration}
+            placeholder="Minutes"
+            min="1"
+            max="480"
+            class="custom-input"
+          />
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div class="buttons">
     {#if !hasStarted || remaining === 0}
-      <button class="btn start" on:click={onStart}>
+      <button class="btn start" on:click={handleStart}>
         <Icons name="play" size={18} className="btn-icon" />
         Start
       </button>
@@ -98,10 +181,15 @@
     overflow: hidden;
   }
 
-  .settings-link {
+  .top-nav {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .nav-link {
     color: var(--text-muted);
     transition: color 0.15s;
     display: flex;
@@ -109,7 +197,7 @@
     justify-content: center;
   }
 
-  .settings-link:hover {
+  .nav-link:hover {
     color: var(--text);
   }
 
@@ -210,6 +298,74 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .duration-selector {
+    margin-bottom: 1rem;
+  }
+
+  .duration-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .duration-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+  }
+
+  .duration-btn {
+    padding: 0.5rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .duration-btn:hover {
+    background: var(--btn-secondary-hover-bg);
+    color: var(--text);
+  }
+
+  .duration-btn.active {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: var(--accent-blue-hover);
+  }
+
+  .custom-duration {
+    margin-top: 0.5rem;
+  }
+
+  .custom-input {
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: var(--input-bg);
+    color: var(--text);
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .custom-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  .custom-input::placeholder {
+    color: var(--input-placeholder);
   }
 
   .buttons {

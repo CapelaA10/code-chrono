@@ -10,6 +10,11 @@ pub struct TimerState {
     pub paused: bool,
     pub phase: u8,
     pub task_active: bool,
+    #[serde(skip)]
+    pub loop_running: bool,
+    pub session_duration: u64,
+    #[serde(skip)]
+    pub session_start_time: u64,
 }
 
 impl Default for TimerState {
@@ -19,6 +24,9 @@ impl Default for TimerState {
             paused: true,
             phase: 0,
             task_active: false,
+            loop_running: false,
+            session_duration: 25 * 60,
+            session_start_time: 0,
         }
     }
 }
@@ -46,6 +54,7 @@ pub mod api {
         db_state: State<'_, Arc<Mutex<Database>>>,
         handle: AppHandle,
         task_name: String,
+        duration_minutes: Option<u64>,
     ) -> Result<(), String> {
         let mut timer = state.lock().unwrap();
         if timer.task_active {
@@ -57,49 +66,20 @@ pub mod api {
             db.log_action(&task_name, "start", 0, 0).unwrap();
         }
 
-        timer.remaining = 25 * 60;
+        let duration_seconds = duration_minutes.unwrap_or(25) * 60;
+        timer.remaining = duration_seconds;
+        timer.session_duration = duration_seconds;
+        timer.session_start_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
         timer.paused = false;
         timer.phase = 0;
         timer.task_active = true;
+        timer.loop_running = true;
         drop(timer);
 
-        let arc_state = Arc::clone(&*state);
-        let handle_clone = handle.clone();
-
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(1));
-            loop {
-                interval.tick().await;
-                {
-                    let mut timer = arc_state.lock().unwrap();
-                    if timer.paused || !timer.task_active {
-                        timer.task_active = false;
-                        break;
-                    }
-                    if timer.remaining > 0 {
-                        timer.remaining -= 1;
-                        let payload = timer.clone();
-                        drop(timer);
-                        let _ = handle_clone.emit("timer-tick", payload);
-                    } else {
-                        let phase = timer.phase;
-                        timer.task_active = false;
-                        drop(timer);
-                        let _ = handle_clone
-                            .notification()
-                            .builder()
-                            .title("Code Chrono")
-                            .body(if phase == 0 {
-                                "Work session done!"
-                            } else {
-                                "Break over!"
-                            })
-                            .show();
-                        break;
-                    }
-                }
-            }
-        });
+        start_timer_loop(Arc::clone(&*state), Arc::clone(&*db_state), handle, task_name);
         Ok(())
     }
 
@@ -107,15 +87,27 @@ pub mod api {
     pub fn pause_timer(
         state: State<'_, Arc<Mutex<TimerState>>>,
         db_state: State<'_, Arc<Mutex<Database>>>,
+        handle: AppHandle,
         task_name: String,
     ) -> Result<(), String> {
-        let mut timer = state.lock().unwrap();
-        let action = if timer.paused { "resume" } else { "pause" };
-        {
-            let db = db_state.lock().unwrap();
-            db.log_action(&task_name, action, 0, timer.phase).unwrap();
+        let should_resume = {
+            let mut timer = state.lock().unwrap();
+            let action = if timer.paused { "resume" } else { "pause" };
+            {
+                let db = db_state.lock().unwrap();
+                db.log_action(&task_name, action, 0, timer.phase).unwrap();
+            }
+            timer.paused = !timer.paused;
+            
+            !timer.paused && timer.task_active && timer.remaining > 0 && !timer.loop_running
+        };
+        
+        if should_resume {
+            let mut timer = state.lock().unwrap();
+            timer.loop_running = true;
+            drop(timer);
+            start_timer_loop(Arc::clone(&*state), Arc::clone(&*db_state), handle, task_name);
         }
-        timer.paused = !timer.paused;
         Ok(())
     }
 
@@ -125,12 +117,34 @@ pub mod api {
     }
 
     #[tauri::command]
-    pub fn reset_timer(state: State<'_, Arc<Mutex<TimerState>>>) -> Result<(), String> {
+    pub fn reset_timer(
+        state: State<'_, Arc<Mutex<TimerState>>>,
+        db_state: State<'_, Arc<Mutex<Database>>>,
+        task_name: String,
+    ) -> Result<(), String> {
+        let elapsed_seconds = {
+            let timer = state.lock().unwrap();
+            if timer.task_active && !task_name.is_empty() {
+                timer.session_duration - timer.remaining
+            } else {
+                0
+            }
+        };
+
+        if elapsed_seconds > 0 {
+            let timer = state.lock().unwrap();
+            let db = db_state.lock().unwrap();
+            let _ = db.log_session_complete(&task_name, elapsed_seconds, timer.phase);
+        }
+
         let mut timer = state.lock().unwrap();
         timer.remaining = 25 * 60;
+        timer.session_duration = 25 * 60;
+        timer.session_start_time = 0;
         timer.paused = true;
         timer.phase = 0;
         timer.task_active = false;
+        timer.loop_running = false;
         Ok(())
     }
 
@@ -190,5 +204,76 @@ pub mod api {
     ) -> Result<Vec<String>, String> {
         let db = db_state.lock().unwrap();
         db.get_unique_task_names(limit).map_err(|e| e.to_string())
+    }
+
+    #[tauri::command]
+    pub fn get_task_stats(
+        db_state: State<'_, Arc<Mutex<Database>>>,
+        start_timestamp: i64,
+        end_timestamp: i64,
+    ) -> Result<Vec<crate::database::TaskStats>, String> {
+        let db = db_state.lock().unwrap();
+        db.get_task_stats(start_timestamp, end_timestamp).map_err(|e| e.to_string())
+    }
+
+    #[tauri::command]
+    pub fn get_daily_breakdown(
+        db_state: State<'_, Arc<Mutex<Database>>>,
+        start_timestamp: i64,
+        end_timestamp: i64,
+    ) -> Result<Vec<crate::database::DailyStats>, String> {
+        let db = db_state.lock().unwrap();
+        db.get_daily_breakdown(start_timestamp, end_timestamp).map_err(|e| e.to_string())
+    }
+
+    fn start_timer_loop(
+        arc_state: Arc<Mutex<TimerState>>,
+        db_state: Arc<Mutex<Database>>,
+        handle: AppHandle,
+        task_name: String,
+    ) {
+        tauri::async_runtime::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(1));
+            loop {
+                interval.tick().await;
+                {
+                    let mut timer = arc_state.lock().unwrap();
+                    
+                    if timer.paused || !timer.task_active {
+                        timer.loop_running = false;
+                        break;
+                    }
+                    
+                    if timer.remaining > 0 {
+                        timer.remaining -= 1;
+                        let payload = timer.clone();
+                        drop(timer);
+                        let _ = handle.emit("timer-tick", payload);
+                    } else {
+                        let phase = timer.phase;
+                        let elapsed_seconds = timer.session_duration;
+                        timer.task_active = false;
+                        timer.loop_running = false;
+                        drop(timer);
+                        
+                        let db = db_state.lock().unwrap();
+                        let _ = db.log_session_complete(&task_name, elapsed_seconds, phase);
+                        drop(db);
+                        
+                        let _ = handle
+                            .notification()
+                            .builder()
+                            .title("Code Chrono")
+                            .body(if phase == 0 {
+                                "Work session done!"
+                            } else {
+                                "Break over!"
+                            })
+                            .show();
+                        break;
+                    }
+                }
+            }
+        });
     }
 }
