@@ -12,8 +12,8 @@
     "windows": [
       {
         "title": "Code Chrono",
-        "width": 800,
-        "height": 600,
+        "width": 380,
+        "height": 420,
         "label": "main"
       }
     ],
@@ -26,8 +26,12 @@
           "windows": ["main"],
           "permissions": [
             "core:default",
+            "global-shortcut:default",
+            "global-shortcut:allow-register",
+            "global-shortcut:allow-unregister",
             "dialog:default",
             "dialog:allow-save",
+            "dialog:allow-open",
             "dialog:allow-message",
             "fs:allow-write-text-file",
             {

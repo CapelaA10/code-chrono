@@ -11,7 +11,7 @@ export default defineConfig(async () => ({
   },
   build: {
     rollupOptions: {
-      external: (id) => id.startsWith('@tauri-apps/api') || id.startsWith('@tauri-apps/plugin')
+      external: (/** @type {string} */ id) => id.startsWith('@tauri-apps/api') || id.startsWith('@tauri-apps/plugin')
     }
   },
   server: {

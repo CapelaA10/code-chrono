@@ -4,11 +4,33 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_notification::NotificationExt;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TimerState {
     pub remaining: u64,
     pub paused: bool,
     pub phase: u8,
+}
+
+impl Default for TimerState {
+    fn default() -> Self {
+        Self {
+            remaining: 25 * 60, // 25:00 when app starts
+            paused: true,
+            phase: 0,
+        }
+    }
+}
+
+/// Row shape for CSV import (matches export header).
+#[derive(serde::Deserialize)]
+struct PomodoroRecordRow {
+    #[allow(dead_code)]
+    id: i64,
+    task_name: String,
+    action: String,
+    elapsed: u64,
+    phase: u8,
+    timestamp: i64,
 }
 
 pub mod api {
@@ -92,8 +114,8 @@ pub mod api {
     #[tauri::command]
     pub fn reset_timer(state: State<'_, Arc<Mutex<TimerState>>>) -> Result<(), String> {
         let mut timer = state.lock().unwrap();
-        timer.remaining = 0;
-        timer.paused = false;
+        timer.remaining = 25 * 60;
+        timer.paused = true;
         timer.phase = 0;
         Ok(())
     }
@@ -120,5 +142,44 @@ pub mod api {
             ));
         }
         Ok(csv)
+    }
+
+    #[tauri::command]
+    pub fn import_csv(
+        db_state: State<'_, Arc<Mutex<Database>>>,
+        path: String,
+    ) -> Result<u64, String> {
+        let mut reader = csv::Reader::from_path(&path).map_err(|e| e.to_string())?;
+        let db = db_state.lock().unwrap();
+        let mut count = 0u64;
+        for result in reader.deserialize() {
+            let record: PomodoroRecordRow = result.map_err(|e| e.to_string())?;
+            db.insert_record(
+                &record.task_name,
+                &record.action,
+                record.elapsed,
+                record.phase,
+                record.timestamp,
+            )
+            .map_err(|e| e.to_string())?;
+            count += 1;
+        }
+        Ok(count)
+    }
+
+    #[tauri::command]
+    pub fn reset_database(db_state: State<'_, Arc<Mutex<Database>>>) -> Result<(), String> {
+        let db = db_state.lock().unwrap();
+        db.clear_all().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    #[tauri::command]
+    pub fn get_unique_task_names(
+        db_state: State<'_, Arc<Mutex<Database>>>,
+        limit: i64,
+    ) -> Result<Vec<String>, String> {
+        let db = db_state.lock().unwrap();
+        db.get_unique_task_names(limit).map_err(|e| e.to_string())
     }
 }

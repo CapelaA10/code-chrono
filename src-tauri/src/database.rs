@@ -84,4 +84,45 @@ impl Database {
             .collect();
         Ok(records)
     }
+
+    /// Insert a session row with a given timestamp (for import).
+    pub fn insert_record(
+        &self,
+        task_name: &str,
+        action: &str,
+        elapsed: u64,
+        phase: u8,
+        timestamp: i64,
+    ) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO pomodoro_sessions (task_name, action, elapsed, phase, timestamp) 
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            (task_name, action, elapsed as i64, phase as i32, timestamp),
+        )?;
+        Ok(())
+    }
+
+    /// Delete all sessions. Does not affect the timer state.
+    pub fn clear_all(&self) -> Result<()> {
+        self.conn.execute("DELETE FROM pomodoro_sessions", [])?;
+        Ok(())
+    }
+
+    /// Unique task names from sessions, most recently used first.
+    pub fn get_unique_task_names(&self, limit: i64) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT task_name FROM (
+                SELECT task_name, MAX(timestamp) AS last_ts
+                FROM pomodoro_sessions
+                GROUP BY task_name
+                ORDER BY last_ts DESC
+                LIMIT ?1
+            )",
+        )?;
+        let names = stmt
+            .query_map([&limit], |row| row.get(0))?
+            .filter_map(Result::ok)
+            .collect();
+        Ok(names)
+    }
 }
