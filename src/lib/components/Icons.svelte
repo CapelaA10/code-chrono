@@ -10,7 +10,8 @@
     | "sun"
     | "moon"
     | "back"
-    | "bar-chart" = "settings";
+    | "bar-chart"
+    | "square" = "settings";
   export let className: string = "";
   export let size: number = 20;
 </script>
@@ -197,4 +198,19 @@
       y2="4"
     /><line x1="6" y1="20" x2="6" y2="16" /></svg
   >
+{:else if name === "square"}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class={className}
+  >
+    <rect x="5" y="5" width="14" height="14" rx="2" ry="2" />
+  </svg>
 {/if}

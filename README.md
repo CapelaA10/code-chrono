@@ -2,15 +2,12 @@
 
 Privacy-first desktop task & time tracker for developers and tech-savvy users. Pomodoro timers, GitHub/Jira sync, local-first storage. Cross-platform: **Mac • Linux • Windows**.
 
-![Demo GIF or screenshot](https://via.placeholder.com/800x400?text=Code+Chrono+Demo) <!-- Add later -->
-
 ## ✨ Features
 - **Pomodoro Timer** with idle detection & notifications
-- **Task Management** (CRUD, projects, tags, drag-drop)
-- **Time Tracking** with CSV reports & GitHub issue sync
+- **Task Management** with simple name
+- **Time Tracking** with CSV reports
 - **Global Hotkeys** for quick actions
-- **Offline-First** SQLite + WebDAV sync
-- **Extensible** plugin system
+- **Offline-First** SQLite
 
 ## 🛠 Tech Stack
 - **Frontend**: Svelte [web:45]
@@ -21,7 +18,7 @@ Privacy-first desktop task & time tracker for developers and tech-savvy users. P
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
+- Node.js
 - Rust (via `rustup`)
 
 ### Installation
@@ -33,5 +30,22 @@ npm install
 # Install Rust if needed: 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-
+# Run dev mode
 npm run tauri dev
+```
+## 🤝 Contributing
+
+We love contributions! Whether you're a Rustacean, a Svelte wizard, or just found a typo, here's how you can help:
+
+1. **Fork** the repository.
+2. **Create a branch** for your feature or fix (`git checkout -b feature/cool-new-thing`).
+3. **Commit your changes** (`git commit -m 'Add some cool feature'`).
+4. **Push to the branch** (`git push origin feature/cool-new-thing`).
+5. **Open a Pull Request**.
+
+### 🛠 Development Focus
+- **Rust/Tauri**: Optimizing SQLite queries and system-level notifications.
+- **Svelte**: Improving the UI/UX of the timer and task list.
+- **Integrations**: We are looking to add more sync options (e.g., GitLab, Notion).
+
+Please make sure to update tests as appropriate.

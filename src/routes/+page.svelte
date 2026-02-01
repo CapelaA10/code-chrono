@@ -5,6 +5,10 @@
   import { onMount, onDestroy } from "svelte";
   import TimerCard from "$lib/components/TimerCard.svelte";
   import { idleMinutes } from "$lib/stores/idle";
+  import {
+    selectedDurationStore,
+    customDurationStore,
+  } from "$lib/stores/timerSettings";
 
   type TimerState = {
     remaining: number;
@@ -13,7 +17,7 @@
     task_active: boolean;
   };
 
-  let remaining = 0;  // Initialize to 0, will be set from backend
+  let remaining = 0;
   let paused = true;
   let phase = "Work";
   let hasStarted = false;
@@ -27,14 +31,20 @@
   let unlisten: UnlistenFn | null = null;
 
   function syncFromBackend(state: TimerState) {
-    remaining = state.remaining;
     paused = state.paused;
     phase = state.phase === 0 ? "Work" : "Break";
-    
+
     if (state.task_active) {
+      remaining = state.remaining;
       hasStarted = true;
-    } else if (state.remaining === 1500 && !state.task_active) {
+    } else {
       hasStarted = false;
+      const selected = get(selectedDurationStore);
+      if (selected === "custom") {
+        remaining = (parseInt(get(customDurationStore)) || 25) * 60;
+      } else {
+        remaining = parseInt(selected) * 60;
+      }
     }
   }
 
@@ -49,14 +59,17 @@
     clearIdleTimeout();
     const mins = get(idleMinutes);
     if (mins <= 0 || !isRunning) return;
-    idleTimeoutId = setTimeout(async () => {
-      try {
-        await invoke("pause_timer", { taskName });
-        const updated = await invoke<TimerState>("get_timer");
-        syncFromBackend(updated);
-      } catch (_) {}
-      idleTimeoutId = null;
-    }, mins * 60 * 1000);
+    idleTimeoutId = setTimeout(
+      async () => {
+        try {
+          await invoke("pause_timer", { taskName });
+          const updated = await invoke<TimerState>("get_timer");
+          syncFromBackend(updated);
+        } catch (_) {}
+        idleTimeoutId = null;
+      },
+      mins * 60 * 1000,
+    );
   }
 
   onMount(async () => {
@@ -72,8 +85,10 @@
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     try {
-      const tasks = await invoke<string[]>("get_unique_task_names", { limit: 10 });
-      recentTasks = tasks.filter(task => task && task.trim().length > 0);
+      const tasks = await invoke<string[]>("get_unique_task_names", {
+        limit: 10,
+      });
+      recentTasks = tasks.filter((task) => task && task.trim().length > 0);
     } catch (_) {
       recentTasks = [];
     }
@@ -179,7 +194,8 @@
     padding: 0;
     min-height: 100vh;
     background: var(--bg-page);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;

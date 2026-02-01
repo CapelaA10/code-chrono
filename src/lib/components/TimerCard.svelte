@@ -1,8 +1,22 @@
 <script lang="ts">
+  import { get } from "svelte/store";
   import Icons from "./Icons.svelte";
   import { currentTaskName } from "$lib/stores/currentTask";
+  import {
+    selectedDurationStore,
+    customDurationStore,
+  } from "$lib/stores/timerSettings";
 
-  export let remaining = 1500;
+  const getInitialRemaining = () => {
+    const selected = get(selectedDurationStore);
+    const custom = get(customDurationStore);
+    if (selected === "custom") {
+      return (parseInt(custom) || 25) * 60;
+    }
+    return parseInt(selected) * 60;
+  };
+
+  export let remaining = getInitialRemaining();
   export let paused = false;
   export let phase = "Work";
   export let hasStarted = false;
@@ -13,34 +27,39 @@
   export let onPause: () => void = () => {};
   export let onReset: () => void = () => {};
 
-  let selectedDuration: "25" | "45" | "60" | "custom" = "25";
-  let customDuration = "";
+  $: {
+    if (!hasStarted) {
+      if ($selectedDurationStore === "custom") {
+        const parsed = parseInt($customDurationStore);
+        if (!isNaN(parsed) && parsed > 0) {
+          remaining = parsed * 60;
+        }
+      } else {
+        remaining = parseInt($selectedDurationStore) * 60;
+      }
+    }
+  }
+
+  $: currentTaskName.set(taskName);
 
   $: minutes = Math.floor(remaining / 60)
     .toString()
     .padStart(2, "0");
-  $: seconds = (remaining % 60).toString().padStart(2, "0");
 
-  $: currentTaskName.set(taskName);
+  $: seconds = (remaining % 60).toString().padStart(2, "0");
 
   function pickTask(name: string) {
     taskName = name;
   }
 
   function handleStart() {
-    let durationMinutes: number | undefined;
-    
-    if (selectedDuration === "custom") {
-      const parsed = parseInt(customDuration);
-      if (!isNaN(parsed) && parsed > 0) {
-        durationMinutes = parsed;
-      } else {
-        durationMinutes = 25; // fallback
-      }
+    let durationMinutes: number;
+    if ($selectedDurationStore === "custom") {
+      const parsed = parseInt($customDurationStore);
+      durationMinutes = !isNaN(parsed) && parsed > 0 ? parsed : 25;
     } else {
-      durationMinutes = parseInt(selectedDuration);
+      durationMinutes = parseInt($selectedDurationStore);
     }
-    
     onStart(durationMinutes);
   }
 </script>
@@ -54,6 +73,7 @@
       <Icons name="settings" size={20} />
     </a>
   </div>
+
   <div class="display">
     <div class="time">{minutes}:{seconds}</div>
     <div class="phase">{phase}</div>
@@ -63,7 +83,7 @@
     <input
       bind:value={taskName}
       type="text"
-      placeholder="Task name"
+      placeholder="Task name (empty does not count stats)"
       class:running={isRunning}
       maxlength="50"
       disabled={isRunning}
@@ -98,46 +118,24 @@
 
   {#if !hasStarted || remaining === 0}
     <div class="duration-selector">
-      <label class="duration-label">Session duration</label>
+      <span class="duration-label">Session duration</span>
       <div class="duration-options">
-        <button
-          type="button"
-          class="duration-btn"
-          class:active={selectedDuration === "25"}
-          on:click={() => selectedDuration = "25"}
-        >
-          25 min
-        </button>
-        <button
-          type="button"
-          class="duration-btn"
-          class:active={selectedDuration === "45"}
-          on:click={() => selectedDuration = "45"}
-        >
-          45 min
-        </button>
-        <button
-          type="button"
-          class="duration-btn"
-          class:active={selectedDuration === "60"}
-          on:click={() => selectedDuration = "60"}
-        >
-          60 min
-        </button>
-        <button
-          type="button"
-          class="duration-btn"
-          class:active={selectedDuration === "custom"}
-          on:click={() => selectedDuration = "custom"}
-        >
-          Custom
-        </button>
+        {#each ["25", "45", "60", "custom"] as const as opt}
+          <button
+            type="button"
+            class="duration-btn"
+            class:active={$selectedDurationStore === opt}
+            on:click={() => ($selectedDurationStore = opt)}
+          >
+            {opt === "custom" ? "Custom" : opt + " min"}
+          </button>
+        {/each}
       </div>
-      {#if selectedDuration === "custom"}
+      {#if $selectedDurationStore === "custom"}
         <div class="custom-duration">
           <input
             type="number"
-            bind:value={customDuration}
+            bind:value={$customDurationStore}
             placeholder="Minutes"
             min="1"
             max="480"
@@ -157,12 +155,25 @@
     {:else if hasStarted && remaining > 0}
       <div class="control-buttons">
         <button class="btn pause" on:click={onPause}>
-          <Icons name={paused ? "play" : "pause"} size={18} className="btn-icon" />
+          <Icons
+            name={paused ? "play" : "pause"}
+            size={18}
+            className="btn-icon"
+          />
           {paused ? "Resume" : "Pause"}
         </button>
-        <button class="btn reset" on:click={onReset} title="Reset timer (clear current task only)">
-          <Icons name="reset" size={18} className="btn-icon" />
-          Reset
+        <button
+          class="btn reset"
+          class:end-session={hasStarted && !paused}
+          on:click={onReset}
+          title={hasStarted ? "End current session" : "Reset timer"}
+        >
+          <Icons
+            name={hasStarted ? "square" : "reset"}
+            size={18}
+            className="btn-icon"
+          />
+          {hasStarted ? "End" : "Reset"}
         </button>
       </div>
     {/if}
@@ -239,7 +250,9 @@
     background: var(--input-bg);
     color: var(--text);
     text-align: center;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
     box-sizing: border-box;
   }
 
@@ -283,7 +296,9 @@
     color: var(--text-muted);
     font-size: 0.75rem;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
   .task-chip:hover {
@@ -328,7 +343,10 @@
     background: var(--bg-card);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s;
   }
 
   .duration-btn:hover {
@@ -382,7 +400,10 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
     background: var(--bg-card);
     color: var(--btn-secondary-text);
     display: inline-flex;
@@ -428,5 +449,15 @@
   .control-buttons {
     display: flex;
     gap: 0.5rem;
+  }
+
+  .btn.reset.end-session {
+    color: var(--error-red, #ff4d4d);
+    border-color: rgba(255, 77, 77, 0.2);
+  }
+
+  .btn.reset.end-session:hover {
+    background: rgba(255, 77, 77, 0.1);
+    border-color: var(--error-red, #ff4d4d);
   }
 </style>
