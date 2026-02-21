@@ -18,10 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'      # Apple Silicon (M1/M2/M3)
-            args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'      # Intel Macs
-            args: '--target x86_64-apple-darwin'
+          - platform: 'macos-latest'      # Universal Mac (M-series & Intel)
+            args: '--target universal-apple-darwin'
           - platform: 'ubuntu-22.04'      # Linux (.deb, .AppImage)
             args: ''
           - platform: 'windows-latest'    # Windows (.exe, .msi)

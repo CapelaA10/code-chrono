@@ -23,6 +23,26 @@
 
 ---
 
+## 📥 Installation
+
+### 🍎 macOS (Apple Silicon & Intel)
+The simplest way to install `Code Chrono` and safely bypass Apple's "Damaged App" Gatekeeper warning is by running this single command in your Terminal:
+```bash
+curl -sL https://raw.githubusercontent.com/CapelaA10/code-chrono/main/install.sh | bash
+```
+> *This automatically downloads the latest release, extracts it, removes the quarantine attribute, and moves it to your `/Applications` folder.*
+
+### 🪟 Windows
+1. Head over to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
+2. Download the `Code.Chrono_x.x.x_x64-setup.exe` file.
+3. Double-click to install. *(If SmartScreen blocks it, click "More info" > "Run anyway")*.
+
+### 🐧 Linux
+1. Head over to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
+2. Download either the `.deb` or `.AppImage` file depending on your distribution.
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -134,7 +154,7 @@ git push origin main
 4. Go to your repository's [Actions tab](https://github.com/CapelaA10/code-chrono/actions) to watch the CI runners compile the binaries for each OS natively.
 5. In ~15 minutes, a new **Draft Release** with all your application installers attached will be automatically published on your GitHub repository!
 
-*Note: Since these binaries are currently unsigned, users may need to bypass SmartScreen (Windows) or Gatekeeper (macOS) by right-clicking and selecting 'Open' / 'Run Anyway'.*
+*Note: Since these binaries are currently unsigned, Windows users may need to bypass SmartScreen by clicking "More info" > "Run anyway". macOS users are highly encouraged to use the `install.sh` script described in the Installation section to automatically sidestep Gatekeeper.*
 
 ---
 
