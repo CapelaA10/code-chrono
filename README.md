@@ -27,6 +27,7 @@
 
 ### 🍎 macOS (Apple Silicon & Intel)
 The simplest way to install `Code Chrono` and safely bypass Apple's "Damaged App" Gatekeeper warning is by running this single command in your Terminal:
+
 ```bash
 curl -sL https://raw.githubusercontent.com/CapelaA10/code-chrono/main/install.sh | bash
 ```
@@ -131,13 +132,12 @@ code-chrono/
         ├── database/       # SQLite operations grouped by domain
         └── integrations.rs # GitHub/GitLab/Jira API clients
 ```
-```
 
 ---
 
 ## 🚀 Releasing
 
-This project uses an automated GitHub Actions CI/CD pipeline. 
+This project uses an automated GitHub Actions CI/CD pipeline.
 
 To create a new release across all platforms (macOS, Windows, Linux) and generate installable binaries (`.dmg`, `.exe`, `.msi`, `.deb`, `.AppImage`):
 
