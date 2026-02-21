@@ -1,4 +1,3 @@
-/* Base and light theme (default) */
 :root,
 [data-theme="light"] {
   --bg-page: #f0f1f3;
@@ -25,33 +24,49 @@
   --accent-red: #dc2626;
   --accent-red-border: #fca5a5;
   --accent-red-hover: #fef2f2;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --error-red: #ef4444;
 }
 
 [data-theme="dark"] {
-  --bg-page: #0f1115;
-  --bg-card: #181b20;
-  --border: #2d3239;
+  --bg-page: #0b0d10;
+  --bg-card: #15181e;
+  --border: #242931;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
-  --input-bg: #1e2329;
-  --input-border: #2d3239;
-  --input-placeholder: #64748b;
-  --focus-ring: rgba(59, 130, 246, 0.25);
+  --input-bg: #1c2128;
+  --input-border: #242931;
+  --input-placeholder: #4b5563;
+  --focus-ring: rgba(96, 165, 250, 0.2);
   --btn-primary-bg: #f1f5f9;
-  --btn-primary-text: #0f1115;
-  --btn-primary-hover: #e2e8f0;
-  --btn-secondary-border: #2d3239;
+  --btn-primary-text: #0b0d10;
+  --btn-primary-hover: #ffffff;
+  --btn-secondary-border: #242931;
   --btn-secondary-text: #cbd5e1;
-  --btn-secondary-hover-bg: #252a30;
+  --btn-secondary-hover-bg: #1e242c;
   --accent-blue: #60a5fa;
-  --accent-blue-border: #3b82f6;
-  --accent-blue-hover: #1e3a5f;
+  --accent-blue-border: #2563eb;
+  --accent-blue-hover: rgba(37, 99, 235, 0.15);
   --accent-green: #34d399;
   --accent-green-border: #059669;
-  --accent-green-hover: #064e3b;
+  --accent-green-hover: rgba(5, 150, 105, 0.15);
   --accent-red: #f87171;
   --accent-red-border: #dc2626;
-  --accent-red-hover: #450a0a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --accent-red-hover: rgba(220, 38, 38, 0.15);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --error-red: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
 }

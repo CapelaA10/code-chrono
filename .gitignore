@@ -4,25 +4,16 @@ node_modules/
 .pnp.js
 
 # Production build
-/src-tauri/target/
 dist/
 build/
 
-# Cargo
-.src-tauri/Cargo.lock
-
 # Svelte
 .svelte-kit/
-.svelte-kit.output/
-.svelte-kit/types/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Tauri
-apps/
-capacitor-cordova/
 src-tauri/target/
-src-tauri/tauri.conf.json.*
 
 # Logs
 logs
@@ -30,7 +21,6 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 
 # OS
 .DS_Store
@@ -41,11 +31,9 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 
-# VSCode
+# IDEs
 .vscode/
-
-# Rust / Cargo
-Cargo.lock  # Optional: commit for reproducibility
+.idea/
 
 # Environment
 .env
@@ -53,8 +41,7 @@ Cargo.lock  # Optional: commit for reproducibility
 .env.*.local
 
 # Misc
-.DS_Store
 *.swp
 *.swo
 *~
-!.env.example
+.aider*

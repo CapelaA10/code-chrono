@@ -1,0 +1,64 @@
+name: Release Code Chrono
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  release:
+    # This job will ONLY run if the commit message contains "release:"
+    # e.g., "release: 0.1.0 prod"
+    if: "contains(github.event.head_commit.message, 'release:')"
+    permissions:
+      contents: write
+      
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'      # Apple Silicon (M1/M2/M3)
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'      # Intel Macs
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'      # Linux (.deb, .AppImage)
+            args: ''
+          - platform: 'windows-latest'    # Windows (.exe, .msi)
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      # The tauri-action automatically builds your app and creates a GitHub Release
+      # It natively reads the version from your tauri.conf.json (e.g., "0.1.0")
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__ # The action auto-replaces __VERSION__ with your app's version
+          releaseName: 'v__VERSION__'
+          releaseBody: 'Automated cross-platform build triggered via GitHub Actions.'
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

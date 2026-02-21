@@ -12,40 +12,28 @@
     "windows": [
       {
         "title": "Code Chrono",
-        "width": 520,
-        "height": 640,
-        "label": "main"
+        "width": 1000,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 600,
+        "label": "main",
+        "decorations": true,
+        "resizable": true
       }
     ],
     "security": {
       "capabilities": [
-        "default",
-         {
-          "identifier": "main-capability",
-          "description": "Code Chrono permissions",
-          "windows": ["main"],
-          "permissions": [
-            "core:default",
-            "global-shortcut:default",
-            "global-shortcut:allow-register",
-            "global-shortcut:allow-unregister",
-            "dialog:default",
-            "dialog:allow-save",
-            "dialog:allow-open",
-            "dialog:allow-message",
-            "fs:allow-write-text-file",
-            {
-              "identifier": "fs:allow-app-write",
-              "allow": [{ "path": "$APPDATA/**" }]
-            }
-          ]
-        }
+        "default"
       ]
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all"
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
   },
   "plugins": {}
 }

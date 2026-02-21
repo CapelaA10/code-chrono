@@ -1,590 +1,312 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
-    import { onMount } from "svelte";
-    import Icons from "$lib/components/Icons.svelte";
+  import { invoke } from '@tauri-apps/api/core';
+  import { onMount } from 'svelte';
+  import { ArrowLeft, Download } from 'lucide-svelte';
+  import type { TaskStat, DailyStat } from '$lib/types';
+  import StatsSummary       from '$lib/components/stats/StatsSummary.svelte';
+  import StatsTimeByTask    from '$lib/components/stats/StatsTimeByTask.svelte';
+  import StatsDailyBreakdown from '$lib/components/stats/StatsDailyBreakdown.svelte';
 
-    type TaskStats = {
-        task_name: string;
-        sessions: number;
-        total_seconds: number;
-    };
+  // ── Types ─────────────────────────────────────────────────────────────────
 
-    type DailyStats = {
-        day: string;
-        task_name: string;
-        sessions: number;
-        total_seconds: number;
-    };
+  type FilterPeriod = 'today' | 'week' | 'month' | 'custom';
 
-    type FilterPeriod = "today" | "week" | "month" | "custom";
+  // ── State ─────────────────────────────────────────────────────────────────
 
-    let stats: TaskStats[] = [];
-    let dailyStats: DailyStats[] = [];
-    let loading = false;
-    let selectedPeriod: FilterPeriod = "today";
-    let customStartDate = "";
-    let customEndDate = "";
+  let stats:      TaskStat[]  = [];
+  let dailyStats: DailyStat[] = [];
+  let loading = false;
+  let selectedPeriod: FilterPeriod = 'today';
+  let customStartDate = '';
+  let customEndDate   = '';
 
-    $: totalSessions = stats.reduce((sum, s) => sum + s.sessions, 0);
-    $: totalMinutes = Math.floor(
-        stats.reduce((sum, s) => sum + s.total_seconds, 0) / 60,
-    );
-    $: totalHours = Math.floor(totalMinutes / 60);
-    $: remainingMinutes = totalMinutes % 60;
+  // ── Derived ───────────────────────────────────────────────────────────────
 
-    onMount(() => {
-        loadStats();
-    });
+  $: totalSeconds  = stats.reduce((sum, s) => sum + s.total_seconds, 0);
+  $: totalMinutes  = Math.floor(totalSeconds / 60);
+  $: totalHours    = Math.floor(totalMinutes / 60);
+  $: remainingMins = totalMinutes % 60;
+  $: totalSessions = stats.reduce((sum, s) => sum + s.sessions, 0);
 
-    function getTimestampRange(): [number, number] {
-        const now = new Date();
-        const endOfDay = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
-            23,
-            59,
-            59,
-        );
-        const endTimestamp = Math.floor(endOfDay.getTime() / 1000);
+  $: dailyGroups = dailyStats.reduce<Record<string, DailyStat[]>>((acc, stat) => {
+    (acc[stat.day] ??= []).push(stat);
+    return acc;
+  }, {});
 
-        let startTimestamp: number;
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-        switch (selectedPeriod) {
-            case "today": {
-                const startOfDay = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate(),
-                    0,
-                    0,
-                    0,
-                );
-                startTimestamp = Math.floor(startOfDay.getTime() / 1000);
-                break;
-            }
-            case "week": {
-                const startOfWeek = new Date(now);
-                startOfWeek.setDate(now.getDate() - now.getDay());
-                startOfWeek.setHours(0, 0, 0, 0);
-                startTimestamp = Math.floor(startOfWeek.getTime() / 1000);
-                break;
-            }
-            case "month": {
-                const startOfMonth = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    1,
-                    0,
-                    0,
-                    0,
-                );
-                startTimestamp = Math.floor(startOfMonth.getTime() / 1000);
-                break;
-            }
-            case "custom": {
-                if (!customStartDate || !customEndDate) {
-                    const startOfDay = new Date(
-                        now.getFullYear(),
-                        now.getMonth(),
-                        now.getDate(),
-                        0,
-                        0,
-                        0,
-                    );
-                    return [
-                        Math.floor(startOfDay.getTime() / 1000),
-                        endTimestamp,
-                    ];
-                }
-                const start = new Date(customStartDate);
-                start.setHours(0, 0, 0, 0);
-                const end = new Date(customEndDate);
-                end.setHours(23, 59, 59, 999);
-                return [
-                    Math.floor(start.getTime() / 1000),
-                    Math.floor(end.getTime() / 1000),
-                ];
-            }
+  /** Returns [startUnix, endUnix] for the selected period. */
+  function getTimestampRange(): [number, number] {
+    const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const end = Math.floor(endOfToday.getTime() / 1000);
+
+    switch (selectedPeriod) {
+      case 'today': {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return [Math.floor(start.getTime() / 1000), end];
+      }
+      case 'week': {
+        const start = new Date(now);
+        start.setDate(now.getDate() - now.getDay());
+        start.setHours(0, 0, 0, 0);
+        return [Math.floor(start.getTime() / 1000), end];
+      }
+      case 'month': {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return [Math.floor(start.getTime() / 1000), end];
+      }
+      case 'custom': {
+        if (!customStartDate || !customEndDate) {
+          return [Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000), end];
         }
-
-        return [startTimestamp, endTimestamp];
+        // Use local midnight by appending T00:00:00 to avoid UTC parse
+        const s = new Date(`${customStartDate}T00:00:00`);
+        const e = new Date(`${customEndDate}T23:59:59`);
+        return [Math.floor(s.getTime() / 1000), Math.floor(e.getTime() / 1000)];
+      }
     }
+  }
 
-    async function loadStats() {
-        loading = true;
-        try {
-            const [startTimestamp, endTimestamp] = getTimestampRange();
+  // ── Data loading ──────────────────────────────────────────────────────────
 
-            stats = await invoke<TaskStats[]>("get_task_stats", {
-                startTimestamp,
-                endTimestamp,
-            });
-
-            dailyStats = await invoke<DailyStats[]>("get_daily_breakdown", {
-                startTimestamp,
-                endTimestamp,
-            });
-        } catch (error) {
-            console.error("Failed to load stats:", error);
-            stats = [];
-            dailyStats = [];
-        } finally {
-            loading = false;
-        }
+  async function loadStats() {
+    loading = true;
+    try {
+      const [startTimestamp, endTimestamp] = getTimestampRange();
+      [stats, dailyStats] = await Promise.all([
+        invoke<TaskStat[]>('get_task_stats',      { startTimestamp, endTimestamp }),
+        invoke<DailyStat[]>('get_daily_breakdown', { startTimestamp, endTimestamp })
+      ]);
+    } catch (err) {
+      console.error('Failed to load stats:', err);
+      stats = [];
+      dailyStats = [];
+    } finally {
+      loading = false;
     }
+  }
 
-    function formatDuration(seconds: number): string {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        }
-        return `${minutes}m`;
+  function setPeriod(p: FilterPeriod) {
+    selectedPeriod = p;
+    loadStats();
+  }
+
+  async function exportCsv() {
+    try {
+      const csv  = await invoke<string>('export_csv');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), {
+        href:     url,
+        download: `chrono-stats-${new Date().toISOString().split('T')[0]}.csv`
+      });
+      a.click();
+      URL.revokeObjectURL(url); // clean up the blob URL
+    } catch (err) {
+      console.error('CSV export failed:', err);
     }
+  }
 
-    function getBarWidth(taskSeconds: number): number {
-        const maxSeconds = Math.max(...stats.map((s) => s.total_seconds), 1);
-        return (taskSeconds / maxSeconds) * 100;
-    }
-
-    function setPeriod(period: FilterPeriod) {
-        selectedPeriod = period;
-        loadStats();
-    }
-
-    function applyCustomDates() {
-        if (customStartDate && customEndDate) {
-            loadStats();
-        }
-    }
-
-    $: dailyGroups = dailyStats.reduce(
-        (acc, stat) => {
-            if (!acc[stat.day]) {
-                acc[stat.day] = [];
-            }
-            acc[stat.day].push(stat);
-            return acc;
-        },
-        {} as Record<string, DailyStats[]>,
-    );
+  onMount(loadStats);
 </script>
 
-<main class="page">
-    <div class="stats">
-        <a href="/" class="back">
-            <Icons name="back" size={18} className="back-icon" />
-            Back to timer
+<main class="stats-page">
+  <div class="stats-container">
+    <div class="stats-header">
+      <div class="header-left">
+        <a href="/" class="back-link">
+          <ArrowLeft size={20} />
+          <span>Back</span>
         </a>
         <h1 class="title">Statistics</h1>
-
-        <section class="section">
-            <div class="filter-buttons">
-                <button
-                    class="filter-btn"
-                    class:active={selectedPeriod === "today"}
-                    on:click={() => setPeriod("today")}
-                >
-                    Today
-                </button>
-                <button
-                    class="filter-btn"
-                    class:active={selectedPeriod === "week"}
-                    on:click={() => setPeriod("week")}
-                >
-                    This Week
-                </button>
-                <button
-                    class="filter-btn"
-                    class:active={selectedPeriod === "month"}
-                    on:click={() => setPeriod("month")}
-                >
-                    This Month
-                </button>
-                <button
-                    class="filter-btn"
-                    class:active={selectedPeriod === "custom"}
-                    on:click={() => setPeriod("custom")}
-                >
-                    Custom
-                </button>
-            </div>
-
-            {#if selectedPeriod === "custom"}
-                <div class="custom-date-range">
-                    <input
-                        type="date"
-                        bind:value={customStartDate}
-                        class="date-input"
-                    />
-                    <span class="date-separator">to</span>
-                    <input
-                        type="date"
-                        bind:value={customEndDate}
-                        class="date-input"
-                    />
-                    <button class="btn-apply" on:click={applyCustomDates}>
-                        Apply
-                    </button>
-                </div>
-            {/if}
-        </section>
-
-        <section class="section">
-            <div class="summary-cards">
-                <div class="card">
-                    <div class="card-label">Total Sessions</div>
-                    <div class="card-value">{totalSessions}</div>
-                </div>
-                <div class="card">
-                    <div class="card-label">Total Time</div>
-                    <div class="card-value">
-                        {#if totalHours > 0}
-                            {totalHours}h {remainingMinutes}m
-                        {:else}
-                            {remainingMinutes}m
-                        {/if}
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2 class="section-title">Time by Task</h2>
-            {#if loading}
-                <p class="loading">Loading...</p>
-            {:else if stats.length === 0}
-                <p class="empty">No data for this period</p>
-            {:else}
-                <div class="task-list">
-                    {#each stats as stat}
-                        <div class="task-item">
-                            <div class="task-header">
-                                <span class="task-name">{stat.task_name}</span>
-                                <span class="task-duration"
-                                    >{formatDuration(stat.total_seconds)}</span
-                                >
-                            </div>
-                            <div class="task-bar-container">
-                                <div
-                                    class="task-bar"
-                                    style="width: {getBarWidth(
-                                        stat.total_seconds,
-                                    )}%"
-                                ></div>
-                            </div>
-                            <div class="task-sessions">
-                                {stat.sessions} session{stat.sessions !== 1
-                                    ? "s"
-                                    : ""}
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-            {/if}
-        </section>
-
-        {#if Object.keys(dailyGroups).length > 0}
-            <section class="section">
-                <h2 class="section-title">Daily Breakdown</h2>
-                <div class="daily-list">
-                    {#each Object.entries(dailyGroups) as [day, dayStats]}
-                        <div class="daily-group">
-                            <div class="daily-date">
-                                {new Date(day).toLocaleDateString()}
-                            </div>
-                            <div class="daily-tasks">
-                                {#each dayStats as stat}
-                                    <div class="daily-task">
-                                        <span class="daily-task-name"
-                                            >{stat.task_name}</span
-                                        >
-                                        <span class="daily-task-time"
-                                            >{formatDuration(
-                                                stat.total_seconds,
-                                            )}</span
-                                        >
-                                    </div>
-                                {/each}
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-            </section>
-        {/if}
+      </div>
+      <button class="export-btn" on:click={exportCsv}>
+        <Download size={18} />
+        <span>Export CSV</span>
+      </button>
     </div>
+
+    <section class="filter-section">
+      <div class="filter-group">
+        {#each ['today', 'week', 'month', 'custom'] as period}
+          <button 
+            class="filter-tab" 
+            class:active={selectedPeriod === period}
+            on:click={() => setPeriod(period as FilterPeriod)}
+          >
+            {period.charAt(0).toUpperCase() + period.slice(1)}
+          </button>
+        {/each}
+      </div>
+
+      {#if selectedPeriod === "custom"}
+        <div class="custom-range">
+          <input type="date" bind:value={customStartDate} class="date-input" />
+          <span class="separator">to</span>
+          <input type="date" bind:value={customEndDate} class="date-input" />
+          <button class="apply-btn" on:click={loadStats}>Apply</button>
+        </div>
+      {/if}
+    </section>
+
+    {#if loading}
+      <div class="loading-state">Loading records...</div>
+    {:else}
+      <StatsSummary {totalSessions} {totalHours} remainingMinutes={remainingMins} />
+      <div class="stats-grid">
+        <StatsTimeByTask {stats} />
+        <StatsDailyBreakdown {dailyGroups} />
+      </div>
+    {/if}
+  </div>
 </main>
 
 <style>
-    .page {
-        width: 100%;
-        max-width: 500px;
-        padding: 1rem;
-    }
+  .stats-page {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-page);
+    padding: 2rem;
+  }
 
-    :global(body) {
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        background: var(--bg-page);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            sans-serif;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        padding-top: 2rem;
-        color: var(--text);
-    }
+  .stats-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
 
-    .stats {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.5rem 1.25rem;
-        box-shadow: var(--shadow);
-    }
+  .stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+  }
 
-    .back {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        color: var(--text-muted);
-        text-decoration: none;
-        font-size: 0.8125rem;
-        margin-bottom: 1rem;
-        transition: color 0.15s;
-    }
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 
-    .back:hover {
-        color: var(--text);
-    }
+  .back-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
 
-    .title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text);
-        margin: 0 0 1.25rem 0;
-    }
+  .back-link:hover {
+    color: var(--text);
+  }
 
-    .section {
-        margin-bottom: 1.5rem;
-    }
+  .title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0;
+  }
 
-    .section-title {
-        font-size: 0.6875rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin: 0 0 0.75rem 0;
-    }
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
 
-    .filter-buttons {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
+  .export-btn:hover {
+    border-color: var(--accent-blue);
+    background: var(--accent-blue-hover);
+    color: var(--accent-blue);
+  }
 
-    .filter-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: var(--bg-card);
-        color: var(--text-muted);
-        cursor: pointer;
-        transition:
-            background 0.15s,
-            color 0.15s,
-            border-color 0.15s;
-    }
+  .filter-section {
+    margin-bottom: 2rem;
+  }
 
-    .filter-btn:hover {
-        color: var(--text);
-        background: var(--btn-secondary-hover-bg);
-    }
+  .filter-group {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    padding: 0.35rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    width: fit-content;
+  }
 
-    .filter-btn.active {
-        border-color: var(--accent-blue);
-        color: var(--accent-blue);
-        background: var(--accent-blue-hover);
-    }
+  .filter-tab {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-    .custom-date-range {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        flex-wrap: wrap;
-    }
+  .filter-tab:hover {
+    color: var(--text);
+  }
 
-    .date-input {
-        padding: 0.4rem 0.5rem;
-        border: 1px solid var(--input-border);
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: var(--input-bg);
-        color: var(--text);
-    }
+  .filter-tab.active {
+    background: var(--accent-blue);
+    color: white;
+  }
 
-    .date-input:focus {
-        outline: none;
-        border-color: var(--accent-blue);
-    }
+  .custom-range {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
 
-    .date-separator {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-    }
+  .date-input {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-family: inherit;
+  }
 
-    .btn-apply {
-        padding: 0.4rem 0.75rem;
-        border: 1px solid var(--accent-blue-border);
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: var(--bg-card);
-        color: var(--accent-blue);
-        cursor: pointer;
-        transition: background 0.15s;
-    }
+  .apply-btn {
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
 
-    .btn-apply:hover {
-        background: var(--accent-blue-hover);
-    }
+  .loading-state {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
 
-    .summary-cards {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
-    }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
 
-    .card {
-        padding: 1rem;
-        background: var(--bg-page);
-        border: 1px solid var(--border);
-        border-radius: 8px;
+  @media (max-width: 900px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
     }
-
-    .card-label {
-        font-size: 0.6875rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-
-    .card-value {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text);
-        font-variant-numeric: tabular-nums;
-    }
-
-    .loading,
-    .empty {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-        text-align: center;
-        padding: 2rem 0;
-    }
-
-    .task-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .task-item {
-        padding: 0.75rem;
-        background: var(--bg-page);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-    }
-
-    .task-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .task-name {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--text);
-    }
-
-    .task-duration {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--accent-blue);
-        font-variant-numeric: tabular-nums;
-    }
-
-    .task-bar-container {
-        width: 100%;
-        height: 6px;
-        background: var(--border);
-        border-radius: 3px;
-        overflow: hidden;
-        margin-bottom: 0.5rem;
-    }
-
-    .task-bar {
-        height: 100%;
-        background: var(--accent-blue);
-        border-radius: 3px;
-        transition: width 0.3s ease;
-    }
-
-    .task-sessions {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    .daily-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .daily-group {
-        padding: 0.75rem;
-        background: var(--bg-page);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-    }
-
-    .daily-date {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-
-    .daily-tasks {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .daily-task {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.875rem;
-    }
-
-    .daily-task-name {
-        color: var(--text);
-    }
-
-    .daily-task-time {
-        color: var(--text-muted);
-        font-variant-numeric: tabular-nums;
-    }
+  }
 </style>

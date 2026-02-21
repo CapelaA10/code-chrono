@@ -1,204 +1,140 @@
 <script lang="ts">
-  import { get } from "svelte/store";
-  import { invoke } from "@tauri-apps/api/core";
-  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-  import { onMount, onDestroy } from "svelte";
-  import TimerCard from "$lib/components/TimerCard.svelte";
-  import { idleMinutes } from "$lib/stores/idle";
-  import {
-    selectedDurationStore,
-    customDurationStore,
-  } from "$lib/stores/timerSettings";
+  import Header from '$lib/components/Header.svelte';
+  import TaskList from '$lib/components/TaskList.svelte';
+  import { onMount } from 'svelte';
+  import { refreshAll, filterProject, filterTag, filterStatus, projects, tags } from '$lib/stores/tasks';
+  import { invoke } from '@tauri-apps/api/core';
 
-  type TimerState = {
-    remaining: number;
-    paused: boolean;
-    phase: number;
-    task_active: boolean;
-  };
+  onMount(() => {
+    // Load everything on startup
+    refreshAll();
 
-  let remaining = 0;
-  let paused = true;
-  let phase = "Work";
-  let hasStarted = false;
-  let isRunning = false;
-  let taskName = "";
-  let recentTasks: string[] = [];
-  let idleTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    const handleActivity = () => {
+      invoke('record_activity').catch(() => {});
+    };
 
-  $: isRunning = !paused && remaining > 0 && hasStarted;
-
-  let unlisten: UnlistenFn | null = null;
-
-  function syncFromBackend(state: TimerState) {
-    paused = state.paused;
-    phase = state.phase === 0 ? "Work" : "Break";
-
-    if (state.task_active) {
-      remaining = state.remaining;
-      hasStarted = true;
-    } else {
-      hasStarted = false;
-      const selected = get(selectedDurationStore);
-      if (selected === "custom") {
-        remaining = (parseInt(get(customDurationStore)) || 25) * 60;
-      } else {
-        remaining = parseInt(selected) * 60;
+    // Throttle activity recording to avoid hammering the backend
+    let activityTimer: ReturnType<typeof setTimeout> | null = null;
+    const throttledActivity = () => {
+      if (!activityTimer) {
+        handleActivity();
+        activityTimer = setTimeout(() => { activityTimer = null; }, 5000);
       }
-    }
-  }
+    };
 
-  function clearIdleTimeout() {
-    if (idleTimeoutId != null) {
-      clearTimeout(idleTimeoutId);
-      idleTimeoutId = null;
-    }
-  }
+    window.addEventListener('mousemove', throttledActivity);
+    window.addEventListener('keydown', throttledActivity);
+    window.addEventListener('mousedown', throttledActivity);
 
-  function scheduleIdlePause() {
-    clearIdleTimeout();
-    const mins = get(idleMinutes);
-    if (mins <= 0 || !isRunning) return;
-    idleTimeoutId = setTimeout(
-      async () => {
-        try {
-          await invoke("pause_timer", { taskName });
-          const updated = await invoke<TimerState>("get_timer");
-          syncFromBackend(updated);
-        } catch (_) {}
-        idleTimeoutId = null;
-      },
-      mins * 60 * 1000,
-    );
-  }
-
-  onMount(async () => {
-    unlisten = await listen<TimerState>("timer-tick", (event) => {
-      syncFromBackend(event.payload);
-      scheduleIdlePause();
-    });
-
-    const initial = await invoke<TimerState>("get_timer");
-    syncFromBackend(initial);
-
-    window.addEventListener("shortcut-pause", onShortcutPause);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    try {
-      const tasks = await invoke<string[]>("get_unique_task_names", {
-        limit: 10,
-      });
-      recentTasks = tasks.filter((task) => task && task.trim().length > 0);
-    } catch (_) {
-      recentTasks = [];
-    }
+    return () => {
+      window.removeEventListener('mousemove', throttledActivity);
+      window.removeEventListener('keydown', throttledActivity);
+      window.removeEventListener('mousedown', throttledActivity);
+      if (activityTimer) clearTimeout(activityTimer);
+    };
   });
 
-  async function onShortcutPause() {
-    try {
-      if (!hasStarted || remaining === 0) {
-        console.log("Shortcut: Starting timer");
-        await startPomodoro();
-        return;
-      }
+  $: activeProject = $filterProject ? $projects.find(p => p.id === $filterProject) : null;
+  $: activeTag = $filterTag ? $tags.find(t => t.id === $filterTag) : null;
 
-      if (!taskName) {
-        console.log("Shortcut pause ignored: no task name");
-        return;
-      }
+  $: viewTitle = activeProject
+    ? activeProject.name
+    : activeTag
+    ? `#${activeTag.name}`
+    : 'All Tasks';
 
-      console.log("Shortcut: Toggling pause");
-      await togglePause();
-    } catch (e) {
-      console.error("Shortcut pause error:", e);
-    }
-  }
-
-  function onVisibilityChange() {
-    if (document.visibilityState === "visible") {
-      clearIdleTimeout();
-      if (isRunning) scheduleIdlePause();
-    } else {
-      scheduleIdlePause();
-    }
-  }
-
-  onDestroy(() => {
-    unlisten?.();
-    window.removeEventListener("shortcut-pause", onShortcutPause);
-    document.removeEventListener("visibilitychange", onVisibilityChange);
-    clearIdleTimeout();
-  });
-
-  async function startPomodoro(durationMinutes?: number) {
-    try {
-      await invoke("start_pomodoro", { taskName, durationMinutes });
-      hasStarted = true;
-      scheduleIdlePause();
-    } catch (e) {
-      console.error("Start pomodoro error:", e);
-    }
-  }
-
-  async function togglePause() {
-    try {
-      await invoke("pause_timer", { taskName });
-      const updated = await invoke<TimerState>("get_timer");
-      syncFromBackend(updated);
-      clearIdleTimeout();
-      if (updated.paused === false) scheduleIdlePause();
-    } catch (e) {
-      console.error("Toggle pause error:", e);
-    }
-  }
-
-  async function resetTimer() {
-    try {
-      await invoke("reset_timer", { taskName });
-      remaining = 1500;
-      paused = true;
-      phase = "Work";
-      hasStarted = false;
-      taskName = "";
-      clearIdleTimeout();
-    } catch (e) {
-      console.error("Reset timer error:", e);
-    }
-  }
+  $: viewSubtitle = activeProject
+    ? 'Project'
+    : activeTag
+    ? 'Tag'
+    : null;
 </script>
 
-<main class="page">
-  <TimerCard
-    bind:taskName
-    {remaining}
-    {paused}
-    {phase}
-    {hasStarted}
-    {isRunning}
-    {recentTasks}
-    onStart={startPomodoro}
-    onPause={togglePause}
-    onReset={resetTimer}
-  />
-</main>
+<Header />
+
+<div class="scroll-container">
+    <div class="view-content">
+      <div class="view-header">
+        <div class="view-title-group">
+          <h1>
+            {#if activeProject}
+              <span class="color-dot" style="background: {activeProject.color ?? '#3b82f6'}"></span>
+            {/if}
+            {viewTitle}
+          </h1>
+          {#if viewSubtitle}
+            <span class="view-subtitle">{viewSubtitle}</span>
+          {/if}
+        </div>
+      </div>
+      
+      <TaskList />
+    </div>
+  </div>
 
 <style>
-  .page {
-    width: 100%;
-    max-width: 320px;
-    padding: 1rem;
+  .scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
   }
 
-  :global(body) {
+  .view-content {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .view-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .view-title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .view-header h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text);
     margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    background: var(--bg-page);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      sans-serif;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--text);
+    gap: 0.5rem;
+  }
+
+  .color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .view-subtitle {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .scroll-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  .scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
   }
 </style>
