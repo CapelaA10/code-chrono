@@ -1,6 +1,6 @@
 [package]
 name = "code-chrono"
-version = "0.1.0"
+version = "0.2.0"
 description = "Code Chrono — privacy-first task & time tracker for developers"
 authors = ["Pedro Capela"]
 edition = "2021"
@@ -26,4 +26,5 @@ tauri-plugin-fs = "2"
 chrono = { version = "0.4", features = ["serde"] }
 csv = "1.3"
 reqwest = { version = "0.12", features = ["json"] }
+tauri-plugin-updater = "2"
 base64 = "0.22"

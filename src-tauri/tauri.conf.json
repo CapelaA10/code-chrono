@@ -35,5 +35,15 @@
       "icons/icon.png"
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/CapelaA10/code-chrono/releases/latest/download/latest.json"
+      ],
+      "pubkey": "UPDATE_PUBKEY_PLACEHOLDER",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }

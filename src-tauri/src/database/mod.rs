@@ -90,6 +90,12 @@ impl Database {
         tasks::save_external(&self.conn, task)
     }
 
+    /// Returns true if a task with the given `external_id` and `source` already
+    /// exists in the database (i.e. was previously imported).
+    pub fn is_external_task_imported(&self, external_id: &str, source: &str) -> Result<bool> {
+        tasks::is_imported(&self.conn, external_id, source)
+    }
+
     pub fn update_task(&self, task: Task) -> Result<()> {
         tasks::update(&self.conn, task)
     }
@@ -110,6 +116,11 @@ impl Database {
 
     pub fn create_project(&self, name: &str, color: Option<&str>) -> Result<i64> {
         projects::create(&self.conn, name, color)
+    }
+
+    /// Find an existing project by name or create a new one. Returns the project id.
+    pub fn find_or_create_project(&self, name: &str) -> Result<i64> {
+        projects::find_or_create(&self.conn, name)
     }
 
     pub fn get_projects(&self) -> Result<Vec<Project>> {

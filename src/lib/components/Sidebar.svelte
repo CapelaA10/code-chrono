@@ -2,7 +2,10 @@
   import SidebarLogo from './sidebar/SidebarLogo.svelte';
   import SidebarNav from './sidebar/SidebarNav.svelte';
   import SidebarIntegrations from './sidebar/SidebarIntegrations.svelte';
-  import { Settings, BarChart2 } from 'lucide-svelte';
+  import AboutDialog from './AboutDialog.svelte';
+  import { Settings, BarChart2, Info } from 'lucide-svelte';
+
+  let showAbout = false;
 </script>
 
 <aside class="sidebar">
@@ -20,8 +23,16 @@
       <Settings size={18} />
       <span>Settings</span>
     </a>
+    <button class="footer-item about-btn" on:click={() => showAbout = true}>
+      <Info size={18} />
+      <span>About</span>
+    </button>
   </div>
 </aside>
+
+{#if showAbout}
+  <AboutDialog on:close={() => showAbout = false} />
+{/if}
 
 <style>
   .sidebar {
@@ -74,5 +85,15 @@
   .footer-item:hover {
     background: var(--btn-secondary-hover-bg);
     color: var(--text);
+  }
+
+  /* Reset button to look like the link items */
+  .about-btn {
+    width: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
   }
 </style>

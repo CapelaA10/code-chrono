@@ -12,7 +12,6 @@ export const filterStatus = writable<string | null>(null);
 
 export async function refreshTasks() {
     try {
-        // Tauri converts camelCase JS params to snake_case Rust params automatically
         const t = await invoke<Task[]>('get_tasks', {
             filterProject: get(filterProject),
             filterTag: get(filterTag),

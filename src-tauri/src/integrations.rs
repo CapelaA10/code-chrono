@@ -1,14 +1,25 @@
 use serde::{Deserialize, Serialize};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
 
-#[derive(Serialize, Deserialize, Debug)]
+/// A task fetched from an external platform before being imported.
+/// `already_imported` is set by the command layer (not here).
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExternalTask {
     pub id: String,
     pub title: String,
     pub description: Option<String>,
     pub status: String,
     pub url: String,
+    /// Labels / tags associated with the issue on the platform.
+    pub labels: Vec<String>,
+    /// Project / repo name the issue belongs to.
+    pub project: Option<String>,
+    /// Set to true by the command layer if this external_id is already in the DB.
+    #[serde(default)]
+    pub already_imported: bool,
 }
+
+// ── GitHub ────────────────────────────────────────────────────────────────
 
 pub async fn fetch_github_tasks(token: &str, repo: Option<&str>) -> Result<Vec<ExternalTask>, String> {
     let client = reqwest::Client::new();
@@ -18,17 +29,9 @@ pub async fn fetch_github_tasks(token: &str, repo: Option<&str>) -> Result<Vec<E
         AUTHORIZATION,
         HeaderValue::from_str(&format!("Bearer {}", token)).map_err(|e| e.to_string())?,
     );
-    headers.insert(
-        "Accept",
-        HeaderValue::from_static("application/vnd.github+json"),
-    );
-    headers.insert(
-        "X-GitHub-Api-Version",
-        HeaderValue::from_static("2022-11-28"),
-    );
+    headers.insert("Accept", HeaderValue::from_static("application/vnd.github+json"));
+    headers.insert("X-GitHub-Api-Version", HeaderValue::from_static("2022-11-28"));
 
-    // If a specific repo is provided (e.g. "owner/repo"), fetch from that repo
-    // Otherwise fall back to the authenticated user's assigned issues
     let url = if let Some(r) = repo.filter(|s| !s.is_empty() && s.contains('/')) {
         format!("https://api.github.com/repos/{}/issues", r)
     } else {
@@ -38,7 +41,7 @@ pub async fn fetch_github_tasks(token: &str, repo: Option<&str>) -> Result<Vec<E
     let res = client
         .get(&url)
         .headers(headers)
-        .query(&[("filter", "assigned"), ("state", "open"), ("per_page", "50")])
+        .query(&[("filter", "assigned"), ("state", "open"), ("per_page", "100")])
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -58,21 +61,48 @@ pub async fn fetch_github_tasks(token: &str, repo: Option<&str>) -> Result<Vec<E
             if issue.get("pull_request").is_some() {
                 return None;
             }
+            let labels: Vec<String> = issue["labels"]
+                .as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|l| l["name"].as_str().map(|s| s.to_string()))
+                .collect();
+
+            let project = issue["repository"]
+                .get("full_name")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    // derive from html_url: github.com/owner/repo/issues/N
+                    issue["html_url"].as_str().and_then(|u| {
+                        let parts: Vec<&str> = u.split('/').collect();
+                        if parts.len() >= 5 {
+                            Some(format!("{}/{}", parts[3], parts[4]))
+                        } else {
+                            None
+                        }
+                    })
+                });
+
             Some(ExternalTask {
                 id: issue["id"].as_i64().unwrap_or(0).to_string(),
                 title: issue["title"].as_str().unwrap_or("No Title").to_string(),
                 description: issue["body"].as_str().map(|s| {
-                    // Truncate very long descriptions
                     if s.len() > 500 { format!("{}…", &s[..500]) } else { s.to_string() }
                 }),
                 status: "todo".to_string(),
                 url: issue["html_url"].as_str().unwrap_or("").to_string(),
+                labels,
+                project,
+                already_imported: false,
             })
         })
         .collect();
 
     Ok(tasks)
 }
+
+// ── Jira ──────────────────────────────────────────────────────────────────
 
 pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<Vec<ExternalTask>, String> {
     let client = reqwest::Client::new();
@@ -82,12 +112,8 @@ pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<
         AUTHORIZATION,
         HeaderValue::from_str(&format!("Basic {}", auth)).map_err(|e| e.to_string())?,
     );
-    headers.insert(
-        "Accept",
-        HeaderValue::from_static("application/json"),
-    );
+    headers.insert("Accept", HeaderValue::from_static("application/json"));
 
-    // Ensure domain doesn't have protocol prefix
     let clean_domain = domain.trim()
         .trim_start_matches("https://")
         .trim_start_matches("http://")
@@ -100,8 +126,8 @@ pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<
         .headers(headers)
         .query(&[
             ("jql", "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"),
-            ("maxResults", "50"),
-            ("fields", "summary,description,status,priority"),
+            ("maxResults", "100"),
+            ("fields", "summary,description,status,priority,labels,project"),
         ])
         .send()
         .await
@@ -120,6 +146,17 @@ pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<
         .iter()
         .map(|issue| {
             let key = issue["key"].as_str().unwrap_or("");
+            let labels: Vec<String> = issue["fields"]["labels"]
+                .as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|l| l.as_str().map(|s| s.to_string()))
+                .collect();
+
+            let project = issue["fields"]["project"]["name"]
+                .as_str()
+                .map(|s| s.to_string());
+
             ExternalTask {
                 id: format!("jira-{}", key),
                 title: format!(
@@ -127,9 +164,15 @@ pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<
                     key,
                     issue["fields"]["summary"].as_str().unwrap_or("No Title")
                 ),
-                description: None, // Jira description is complex ADF format
-                status: "todo".to_string(),
+                description: None,
+                status: issue["fields"]["status"]["statusCategory"]["name"]
+                    .as_str()
+                    .unwrap_or("todo")
+                    .to_string(),
                 url: format!("https://{}/browse/{}", clean_domain, key),
+                labels,
+                project,
+                already_imported: false,
             }
         })
         .collect();
@@ -141,6 +184,8 @@ fn b64_encode(s: &str) -> String {
     use base64::{Engine as _, engine::general_purpose};
     general_purpose::STANDARD.encode(s)
 }
+
+// ── GitLab ────────────────────────────────────────────────────────────────
 
 pub async fn fetch_gitlab_tasks(token: &str, host: &str) -> Result<Vec<ExternalTask>, String> {
     let client = reqwest::Client::new();
@@ -164,7 +209,8 @@ pub async fn fetch_gitlab_tasks(token: &str, host: &str) -> Result<Vec<ExternalT
         .query(&[
             ("scope", "assigned_to_me"),
             ("state", "opened"),
-            ("per_page", "50"),
+            ("per_page", "100"),
+            ("with_labels_details", "true"),
         ])
         .send()
         .await
@@ -172,30 +218,46 @@ pub async fn fetch_gitlab_tasks(token: &str, host: &str) -> Result<Vec<ExternalT
 
     let status = res.status();
     if !status.is_success() {
-        let body = res
-            .text()
-            .await
-            .unwrap_or_else(|_| "Could not read error body".to_string());
+        let body = res.text().await.unwrap_or_else(|_| "Could not read error body".to_string());
         return Err(format!("GitLab API error ({}): {}", status, body));
     }
 
     let issues: Vec<serde_json::Value> = res.json().await.map_err(|e| {
-        format!(
-            "Failed to parse GitLab response: {}. Make sure your token and host are correct.",
-            e
-        )
+        format!("Failed to parse GitLab response: {}. Make sure your token and host are correct.", e)
     })?;
 
     let tasks = issues
         .into_iter()
-        .map(|issue| ExternalTask {
-            id: format!("gl-{}", issue["id"].as_i64().unwrap_or(0)),
-            title: issue["title"].as_str().unwrap_or("No Title").to_string(),
-            description: issue["description"].as_str().map(|s| {
-                if s.len() > 500 { format!("{}…", &s[..500]) } else { s.to_string() }
-            }),
-            status: "todo".to_string(),
-            url: issue["web_url"].as_str().unwrap_or("").to_string(),
+        .map(|issue| {
+            let labels: Vec<String> = issue["labels"]
+                .as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|l| {
+                    // with_labels_details gives objects; without gives strings
+                    l["name"].as_str()
+                        .or_else(|| l.as_str())
+                        .map(|s| s.to_string())
+                })
+                .collect();
+
+            let project = issue["references"]["full"]
+                .as_str()
+                .and_then(|r| r.split('#').next())
+                .map(|s| s.trim_start_matches('/').to_string());
+
+            ExternalTask {
+                id: format!("gl-{}", issue["id"].as_i64().unwrap_or(0)),
+                title: issue["title"].as_str().unwrap_or("No Title").to_string(),
+                description: issue["description"].as_str().map(|s| {
+                    if s.len() > 500 { format!("{}…", &s[..500]) } else { s.to_string() }
+                }),
+                status: issue["state"].as_str().unwrap_or("opened").to_string(),
+                url: issue["web_url"].as_str().unwrap_or("").to_string(),
+                labels,
+                project,
+                already_imported: false,
+            }
         })
         .collect();
 

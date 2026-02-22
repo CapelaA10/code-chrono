@@ -1,6 +1,7 @@
 <script lang="ts">
   import Header from '$lib/components/Header.svelte';
   import TaskList from '$lib/components/TaskList.svelte';
+  import TaskFilterBar from '$lib/components/task/TaskFilterBar.svelte';
   import { onMount } from 'svelte';
   import { refreshAll, filterProject, filterTag, filterStatus, projects, tags } from '$lib/stores/tasks';
   import { invoke } from '@tauri-apps/api/core';
@@ -68,6 +69,7 @@
         </div>
       </div>
       
+      <TaskFilterBar />
       <TaskList />
     </div>
   </div>

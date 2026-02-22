@@ -6,6 +6,7 @@
   import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
   import { initTimerStore } from "$lib/stores/timer";
   import Sidebar from "$lib/components/Sidebar.svelte";
+  import UpdateChecker from "$lib/components/UpdateChecker.svelte";
 
   const TOGGLE_PAUSE_SHORTCUT = "CommandOrControl+Shift+P";
 
@@ -36,6 +37,8 @@
     <slot />
   </div>
 </div>
+
+<UpdateChecker />
 
 <style>
   .app-layout {
