@@ -6,6 +6,7 @@
 <script lang="ts">
   import type { TaskStat } from '$lib/types';
   import { formatDuration } from '$lib/utils/format';
+  import { strings } from '$lib/i18n/store';
 
   export let stats: TaskStat[];
 
@@ -20,10 +21,10 @@
 </script>
 
 <section>
-  <h2 class="section-title">Time by Task</h2>
+  <h2 class="section-title">{$strings.timeByTask}</h2>
 
   {#if stats.length === 0}
-    <p class="empty">No sessions recorded for this period.</p>
+    <p class="empty">{$strings.noSessions}</p>
   {:else}
     <ul class="task-list">
       {#each stats as stat (stat.task_name)}

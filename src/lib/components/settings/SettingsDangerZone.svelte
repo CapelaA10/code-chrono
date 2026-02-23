@@ -3,6 +3,7 @@
   import { ask } from '@tauri-apps/plugin-dialog';
   import { createEventDispatcher } from 'svelte';
   import { Trash2 } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   const dispatch = createEventDispatcher<{ message: { text: string; type: 'success' | 'error' } }>();
 
@@ -37,15 +38,15 @@
       <Trash2 size={20} />
     </div>
     <div class="header-text">
-      <h3>Danger Zone</h3>
-      <p>Actions that cannot be undone</p>
+      <h3>{$strings.dangerZone}</h3>
+      <p>{$strings.dangerZoneDesc}</p>
     </div>
   </div>
   <div class="card-content">
-    <p class="danger-text">Wipe all session history. This will not affect your current timer status or settings.</p>
+    <p class="danger-text">{$strings.resetWarning}</p>
     <button class="premium-btn danger-btn" on:click={clearAllData} disabled={clearBusy || isConfirming}>
       <Trash2 size={18} />
-      <span>{clearBusy ? 'Clearing…' : 'Reset Database'}</span>
+      <span>{clearBusy ? 'Clearing…' : $strings.resetDatabase}</span>
     </button>
   </div>
 </div>
@@ -54,16 +55,16 @@
   .settings-card {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: 1.25rem; padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: box-shadow 0.2s;
+    box-shadow: var(--shadow-lg); transition: box-shadow 0.2s;
   }
-  .settings-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
-  .danger-card   { border-color: rgba(239,68,68,0.2); }
+  .settings-card:hover { box-shadow: var(--shadow); }
+  .danger-card   { border-color: color-mix(in srgb, var(--error-red) 20%, transparent); }
   .card-header   { display: flex; gap: 1rem; margin-bottom: 2rem; }
   .header-icon {
     width: 42px; height: 42px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .header-icon.danger { background: rgba(239,68,68,0.1); color: #ef4444; }
+  .header-icon.danger { background: color-mix(in srgb, var(--error-red) 10%, transparent); color: var(--error-red); }
   .header-text h3 { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--text); }
   .header-text p  { margin: 0.25rem 0 0 0; font-size: 0.8125rem; color: var(--text-muted); }
   .card-content   { display: flex; flex-direction: column; gap: 1rem; }
@@ -74,9 +75,9 @@
     cursor: pointer; transition: all 0.2s; border: none; font-family: inherit;
   }
   .danger-btn {
-    background: rgba(239,68,68,0.1); color: #ef4444;
-    border: 1px solid rgba(239,68,68,0.2); margin-top: 0.5rem;
+    background: color-mix(in srgb, var(--error-red) 10%, transparent); color: var(--error-red);
   }
-  .danger-btn:hover:not(:disabled) { background: #ef4444; color: white; }
+  .danger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .danger-btn:hover:not(:disabled) { background: var(--error-red); color: white; }
   .premium-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

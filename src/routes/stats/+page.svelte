@@ -3,20 +3,22 @@
   import { onMount } from 'svelte';
   import { ArrowLeft, Download } from 'lucide-svelte';
   import type { TaskStat, DailyStat } from '$lib/types';
-  import StatsSummary       from '$lib/components/stats/StatsSummary.svelte';
-  import StatsTimeByTask    from '$lib/components/stats/StatsTimeByTask.svelte';
+  import StatsSummary        from '$lib/components/stats/StatsSummary.svelte';
+  import StatsTimeByTask     from '$lib/components/stats/StatsTimeByTask.svelte';
   import StatsDailyBreakdown from '$lib/components/stats/StatsDailyBreakdown.svelte';
-
-  // ── Types ─────────────────────────────────────────────────────────────────
+  import StatsHeatmap        from '$lib/components/stats/StatsHeatmap.svelte';
+  import StatsBarChart       from '$lib/components/stats/StatsBarChart.svelte';
+  import { strings } from '$lib/i18n/store';
+  import DatePicker          from '$lib/components/DatePicker.svelte';
 
   type FilterPeriod = 'today' | 'week' | 'month' | 'custom';
-
-  // ── State ─────────────────────────────────────────────────────────────────
+  type ViewMode = 'charts' | 'details';
 
   let stats:      TaskStat[]  = [];
   let dailyStats: DailyStat[] = [];
   let loading = false;
   let selectedPeriod: FilterPeriod = 'today';
+  let viewMode: ViewMode = 'charts';
   let customStartDate = '';
   let customEndDate   = '';
 
@@ -60,15 +62,12 @@
         if (!customStartDate || !customEndDate) {
           return [Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000), end];
         }
-        // Use local midnight by appending T00:00:00 to avoid UTC parse
         const s = new Date(`${customStartDate}T00:00:00`);
         const e = new Date(`${customEndDate}T23:59:59`);
         return [Math.floor(s.getTime() / 1000), Math.floor(e.getTime() / 1000)];
       }
     }
   }
-
-  // ── Data loading ──────────────────────────────────────────────────────────
 
   async function loadStats() {
     loading = true;
@@ -102,7 +101,7 @@
         download: `chrono-stats-${new Date().toISOString().split('T')[0]}.csv`
       });
       a.click();
-      URL.revokeObjectURL(url); // clean up the blob URL
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error('CSV export failed:', err);
     }
@@ -117,47 +116,66 @@
       <div class="header-left">
         <a href="/" class="back-link">
           <ArrowLeft size={20} />
-          <span>Back</span>
+          <span>{$strings.back}</span>
         </a>
-        <h1 class="title">Statistics</h1>
+        <h1 class="title">{$strings.statistics}</h1>
       </div>
       <button class="export-btn" on:click={exportCsv}>
         <Download size={18} />
-        <span>Export CSV</span>
+        <span>{$strings.exportCsv}</span>
       </button>
     </div>
 
-    <section class="filter-section">
+    <div class="toolbar">
+      <!-- Period filter -->
       <div class="filter-group">
         {#each ['today', 'week', 'month', 'custom'] as period}
-          <button 
-            class="filter-tab" 
+          <button
+            class="filter-tab"
             class:active={selectedPeriod === period}
             on:click={() => setPeriod(period as FilterPeriod)}
           >
-            {period.charAt(0).toUpperCase() + period.slice(1)}
+            {$strings[period as 'today' | 'week' | 'month' | 'custom']}
           </button>
         {/each}
       </div>
 
-      {#if selectedPeriod === "custom"}
-        <div class="custom-range">
-          <input type="date" bind:value={customStartDate} class="date-input" />
-          <span class="separator">to</span>
-          <input type="date" bind:value={customEndDate} class="date-input" />
-          <button class="apply-btn" on:click={loadStats}>Apply</button>
-        </div>
-      {/if}
-    </section>
+      <!-- Charts / Details toggle -->
+      <div class="view-toggle">
+        <button class="filter-tab" class:active={viewMode === 'charts'}  on:click={() => viewMode = 'charts'}>
+          {$strings.charts}
+        </button>
+        <button class="filter-tab" class:active={viewMode === 'details'} on:click={() => viewMode = 'details'}>
+          {$strings.details}
+        </button>
+      </div>
+    </div>
+
+    {#if selectedPeriod === 'custom'}
+      <div class="custom-range">
+        <div style="flex:1"><DatePicker bind:value={customStartDate} placeholder="Start Date" /></div>
+        <span class="separator">to</span>
+        <div style="flex:1"><DatePicker bind:value={customEndDate} placeholder="End Date" /></div>
+        <button class="apply-btn" on:click={loadStats}>{$strings.apply}</button>
+      </div>
+    {/if}
 
     {#if loading}
-      <div class="loading-state">Loading records...</div>
+      <div class="loading-state">{$strings.loading}</div>
     {:else}
       <StatsSummary {totalSessions} {totalHours} remainingMinutes={remainingMins} />
-      <div class="stats-grid">
-        <StatsTimeByTask {stats} />
-        <StatsDailyBreakdown {dailyGroups} />
-      </div>
+
+      {#if viewMode === 'charts'}
+        <div class="charts-grid">
+          <StatsHeatmap {dailyStats} />
+          <StatsBarChart {dailyStats} />
+        </div>
+      {:else}
+        <div class="stats-grid">
+          <StatsTimeByTask {stats} />
+          <StatsDailyBreakdown {dailyGroups} />
+        </div>
+      {/if}
     {/if}
   </div>
 </main>
@@ -170,10 +188,7 @@
     padding: 2rem;
   }
 
-  .stats-container {
-    max-width: 1000px;
-    margin: 0 auto;
-  }
+  .stats-container { max-width: 1000px; margin: 0 auto; }
 
   .stats-header {
     display: flex;
@@ -182,59 +197,39 @@
     margin-bottom: 2.5rem;
   }
 
-  .header-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+  .header-left { display: flex; flex-direction: column; gap: 0.5rem; }
 
   .back-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: color 0.15s;
+    display: flex; align-items: center; gap: 0.5rem;
+    color: var(--text-muted); text-decoration: none;
+    font-size: 0.875rem; font-weight: 500; transition: color 0.15s;
   }
+  .back-link:hover { color: var(--text); }
 
-  .back-link:hover {
-    color: var(--text);
-  }
-
-  .title {
-    font-size: 2rem;
-    font-weight: 800;
-    margin: 0;
-  }
+  .title { font-size: 2rem; font-weight: 800; margin: 0; }
 
   .export-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
+    display: flex; align-items: center; gap: 0.625rem;
     padding: 0.625rem 1.25rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text);
+    font-size: 0.875rem; font-weight: 600; cursor: pointer;
     transition: var(--transition);
   }
-
   .export-btn:hover {
     border-color: var(--accent-blue);
     background: var(--accent-blue-hover);
     color: var(--accent-blue);
   }
 
-  .filter-section {
-    margin-bottom: 2rem;
+  .toolbar {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
   }
 
-  .filter-group {
+  .filter-group, .view-toggle {
     display: flex;
     gap: 0.5rem;
     background: var(--bg-card);
@@ -246,67 +241,51 @@
 
   .filter-tab {
     padding: 0.5rem 1.25rem;
-    border: none;
-    background: none;
+    border: none; background: none;
     border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
+    font-size: 0.875rem; font-weight: 600;
+    color: var(--text-muted); cursor: pointer;
     transition: all 0.2s;
   }
-
-  .filter-tab:hover {
-    color: var(--text);
-  }
-
-  .filter-tab.active {
-    background: var(--accent-blue);
-    color: white;
-  }
+  .filter-tab:hover { color: var(--text); }
+  .filter-tab.active { background: var(--accent-blue); color: white; }
 
   .custom-range {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 1.25rem;
   }
 
-  .date-input {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    font-family: inherit;
-  }
+  .separator { color: var(--text-muted); font-size: 0.875rem; }
 
   .apply-btn {
-    background: var(--accent-blue);
-    color: white;
-    border: none;
-    padding: 0.5rem 1.25rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
+    background: var(--accent-blue); color: white; border: none;
+    padding: 0.5rem 1.25rem; border-radius: 8px;
+    font-weight: 600; cursor: pointer;
   }
 
   .loading-state {
-    text-align: center;
-    padding: 4rem;
-    color: var(--text-muted);
-    font-weight: 500;
+    text-align: center; padding: 4rem;
+    color: var(--text-muted); font-weight: 500;
   }
 
-  .stats-grid {
+  .stats-grid, .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
   }
 
+  .charts-grid {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    grid-template-columns: unset;
+  }
+
   @media (max-width: 900px) {
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
+    .stats-grid { grid-template-columns: 1fr; }
   }
 </style>

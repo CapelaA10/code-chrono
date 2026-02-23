@@ -116,7 +116,7 @@
   .row:hover:not(:disabled) { background: var(--btn-secondary-hover-bg); }
   .row:disabled  { cursor: default; }
   .row.is-imported { opacity: 0.4; }
-  .row.is-selected { background: rgba(59,130,246,0.06); }
+  .row.is-selected { background: color-mix(in srgb, var(--accent-blue) 6%, transparent); }
 
   .row-check { flex-shrink: 0; display: flex; color: var(--text-muted); }
 
@@ -137,8 +137,8 @@
     font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem;
     border-radius: 99px; letter-spacing: 0.02em;
   }
-  .chip.proj { background: rgba(99,102,241,0.12); color: #6366f1; }
-  .chip.lbl  { background: rgba(16,185,129,0.12); color: #10b981; }
+  .chip.proj { background: color-mix(in srgb, var(--accent-blue) 12%, transparent); color: var(--accent-blue); }
+  .chip.lbl  { background: color-mix(in srgb, var(--accent-green) 12%, transparent); color: var(--accent-green); }
 
   .ext-link {
     flex-shrink: 0; font-size: 0.8rem; color: var(--text-muted);

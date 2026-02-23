@@ -15,6 +15,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { refreshTasks, refreshTags, refreshProjects } from '$lib/stores/tasks';
   import { CheckCircle2, RefreshCw, AlertCircle } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   import SyncDrawerHeader  from './SyncDrawerHeader.svelte';
   import SyncFilterBar     from './SyncFilterBar.svelte';
@@ -160,20 +161,20 @@
     <div class="center-state">
       <CheckCircle2 size={36} class="state-ok" />
       <p class="state-title">{importedCount} issue{importedCount !== 1 ? 's' : ''} imported</p>
-      <button class="btn primary small" on:click={close}>Done</button>
+      <button class="btn primary small" on:click={close}>{$strings.done}</button>
     </div>
 
   {:else if loading}
     <div class="center-state">
       <RefreshCw size={20} class="spin" />
-      <p class="state-hint">Fetching from {source}…</p>
+      <p class="state-hint">{$strings.loadingIssues}</p>
     </div>
 
   {:else if error && issues.length === 0}
     <div class="center-state">
       <AlertCircle size={24} class="state-err" />
       <p class="state-hint">{error}</p>
-      <button class="btn secondary small" on:click={load}>Retry</button>
+      <button class="btn secondary small" on:click={load}>{$strings.retry}</button>
     </div>
 
   {:else}
@@ -256,7 +257,7 @@
   }
   .btn.small { padding: 0.4rem 0.875rem; }
   .btn.primary   { background: var(--accent-blue); color: white; }
-  .btn.primary:hover { background: #2563eb; }
+  .btn.primary:hover { filter: brightness(0.9); }
   .btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
   .btn.secondary:hover { background: var(--btn-secondary-hover-bg); }
 

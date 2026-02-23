@@ -7,6 +7,7 @@
   import { initTimerStore } from "$lib/stores/timer";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import UpdateChecker from "$lib/components/UpdateChecker.svelte";
+  import BreakBanner from "$lib/components/timer/BreakBanner.svelte";
 
   const TOGGLE_PAUSE_SHORTCUT = "CommandOrControl+Shift+P";
 
@@ -34,6 +35,9 @@
 <div class="app-layout" data-theme={$theme}>
   <Sidebar />
   <div class="main-container">
+    <div class="banner-wrapper">
+      <BreakBanner />
+    </div>
     <slot />
   </div>
 </div>
@@ -55,6 +59,15 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+  }
+
+  .banner-wrapper {
+    position: absolute;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
   }
 
   :global(body) {

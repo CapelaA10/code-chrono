@@ -61,3 +61,17 @@ export interface DailyStat {
     sessions: number;
     total_seconds: number;
 }
+
+// ── Integrations ───────────────────────────────────────────────────────────
+
+export interface ExternalTask {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    url: string;
+    labels: string[];
+    project: string | null;
+    already_imported: boolean;
+}
+

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { filterProject, filterTag, filterStatus, projects, tags, refreshTasks } from '$lib/stores/tasks';
   import { X, Filter } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   const STATUSES = [
     { value: 'todo',  label: 'To Do' },
@@ -61,57 +63,51 @@
 <div class="filter-bar">
   <div class="filter-icon-wrap">
     <Filter size={14} />
-    <span class="filter-label">Filter</span>
+    <span class="filter-label">{$strings.filter}</span>
   </div>
 
   <!-- Project select -->
   {#if $projects.length > 0}
-    <select
-      class="filter-select"
-      value={selectedProject ?? ''}
-      on:change={(e) => {
-        const v = (e.currentTarget as HTMLSelectElement).value;
-        applyProject(v === '' ? null : Number(v));
-      }}
-    >
-      <option value="">All projects</option>
-      {#each $projects as p}
-        <option value={p.id}>{p.name}</option>
-      {/each}
-    </select>
+    <div class="dropdown-container">
+      <Dropdown
+        value={selectedProject ?? ''}
+        placeholder={$strings.allProjects}
+        options={[
+          { value: '', label: $strings.allProjects },
+          ...$projects.map(p => ({ value: p.id, label: p.name }))
+        ]}
+        on:change={(e) => applyProject(e.detail === '' ? null : Number(e.detail))}
+      />
+    </div>
   {/if}
 
   <!-- Tag select -->
   {#if $tags.length > 0}
-    <select
-      class="filter-select"
-      value={selectedTag ?? ''}
-      on:change={(e) => {
-        const v = (e.currentTarget as HTMLSelectElement).value;
-        applyTag(v === '' ? null : Number(v));
-      }}
-    >
-      <option value="">All tags</option>
-      {#each $tags as t}
-        <option value={t.id}>#{t.name}</option>
-      {/each}
-    </select>
+    <div class="dropdown-container">
+      <Dropdown
+        value={selectedTag ?? ''}
+        placeholder={$strings.allTags}
+        options={[
+          { value: '', label: $strings.allTags },
+          ...$tags.map(t => ({ value: t.id, label: '#' + t.name }))
+        ]}
+        on:change={(e) => applyTag(e.detail === '' ? null : Number(e.detail))}
+      />
+    </div>
   {/if}
 
   <!-- Status select -->
-  <select
-    class="filter-select"
-    value={selectedStatus ?? ''}
-    on:change={(e) => {
-      const v = (e.currentTarget as HTMLSelectElement).value;
-      applyStatus(v === '' ? null : v);
-    }}
-  >
-    <option value="">All statuses</option>
-    {#each STATUSES as s}
-      <option value={s.value}>{s.label}</option>
-    {/each}
-  </select>
+  <div class="dropdown-container status">
+    <Dropdown
+      value={selectedStatus ?? ''}
+      placeholder={$strings.allStatuses}
+      options={[
+        { value: '', label: $strings.allStatuses },
+        ...STATUSES.map(s => ({ value: s.value, label: s.label }))
+      ]}
+      on:change={(e) => applyStatus(e.detail === '' ? null : e.detail)}
+    />
+  </div>
 
   <!-- Active filter pills -->
   {#if hasFilter}
@@ -135,7 +131,7 @@
 
     <button class="clear-btn" on:click={clearAll} title="Clear all filters">
       <X size={13} />
-      Clear
+      {$strings.clear}
     </button>
   {/if}
 </div>
@@ -168,21 +164,13 @@
     letter-spacing: 0.06em;
   }
 
-  .filter-select {
-    background: var(--bg-page);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.35rem 0.625rem;
-    font-size: 0.8rem;
-    color: var(--text);
-    outline: none;
-    cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.15s;
+  .dropdown-container {
+    min-width: 140px;
+    flex-shrink: 0;
   }
 
-  .filter-select:focus {
-    border-color: var(--accent-blue);
+  .dropdown-container.status {
+    min-width: 150px;
   }
 
   .active-pills {
@@ -206,14 +194,14 @@
     transition: all 0.15s;
   }
 
-  .project-pill { background: rgba(99,102,241,0.12); color: #6366f1; }
-  .project-pill:hover { background: rgba(99,102,241,0.22); }
+  .project-pill { background: var(--accent-blue-hover, rgba(59,130,246,0.12)); color: var(--accent-blue, #6366f1); }
+  .project-pill:hover { background: var(--accent-blue, rgba(59,130,246,0.22)); color: white; }
 
-  .tag-pill { background: rgba(16,185,129,0.12); color: #10b981; }
-  .tag-pill:hover { background: rgba(16,185,129,0.22); }
+  .tag-pill { background: var(--accent-green-hover, rgba(16,185,129,0.12)); color: var(--accent-green, #10b981); }
+  .tag-pill:hover { background: var(--accent-green, rgba(16,185,129,0.22)); color: white; }
 
-  .status-pill { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
-  .status-pill:hover { background: rgba(59,130,246,0.22); }
+  .status-pill { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); }
+  .status-pill:hover { border-color: var(--accent-blue); }
 
   .clear-btn {
     display: flex;

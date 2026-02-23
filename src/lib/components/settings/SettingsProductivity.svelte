@@ -3,7 +3,9 @@
   import { onMount } from 'svelte';
   import { idleMinutes } from '$lib/stores/idle';
   import { timerDuration } from '$lib/stores/timerSettings';
+  import { strings } from '$lib/i18n/store';
   import { Keyboard } from 'lucide-svelte';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   const DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120];
 
@@ -36,16 +38,16 @@
       <Keyboard size={20} />
     </div>
     <div class="header-text">
-      <h3>Productivity</h3>
-      <p>Shortcuts and automated behaviours</p>
+      <h3>{$strings.productivity}</h3>
+      <p>{$strings.productivityDesc}</p>
     </div>
   </div>
   <div class="card-content">
 
     <div class="setting-row">
       <div class="row-info">
-        <span class="row-label">Global Toggle</span>
-        <span class="row-hint">Pause/Resume from anywhere</span>
+        <span class="row-label">{$strings.globalToggle}</span>
+        <span class="row-hint">{$strings.pauseResumeHint}</span>
       </div>
       <kbd class="shortcut-tag">{hotkeyLabel}</kbd>
     </div>
@@ -54,8 +56,8 @@
 
     <div class="setting-row">
       <div class="row-info">
-        <span class="row-label">Auto-Pause (Idle)</span>
-        <span class="row-hint">Time until auto-pause when inactive</span>
+        <span class="row-label">{$strings.autoPause}</span>
+        <span class="row-hint">{$strings.autoPauseHint}</span>
       </div>
       <div class="number-input-group">
         <input
@@ -64,7 +66,7 @@
           on:input={(e) => setIdleMinutes(Number((e.currentTarget as HTMLInputElement).value))}
           class="premium-input number"
         />
-        <span class="unit-label">min</span>
+        <span class="unit-label">{$strings.mins}</span>
       </div>
     </div>
 
@@ -72,21 +74,23 @@
 
     <div class="setting-row">
       <div class="row-info">
-        <span class="row-label">Default Timer Duration</span>
-        <span class="row-hint">Standard length of a Pomodoro session</span>
+        <span class="row-label">{$strings.defaultDuration}</span>
+        <span class="row-hint">{$strings.defaultDurationHint}</span>
       </div>
-      <select bind:value={$timerDuration} class="premium-input select">
-        {#each DURATIONS as d}
-          <option value={d}>{d} minutes</option>
-        {/each}
-      </select>
+      <div style="min-width: 140px;">
+        <Dropdown
+          value={$timerDuration}
+          options={DURATIONS.map(d => ({ value: d, label: d + ' ' + $strings.mins }))}
+          on:change={(e) => $timerDuration = e.detail}
+        />
+      </div>
     </div>
     <div class="divider"></div>
 
     <div class="setting-row">
       <div class="row-info">
-        <span class="row-label">Auto-import Projects</span>
-        <span class="row-hint">Create local projects from external issues on import</span>
+        <span class="row-label">{$strings.autoImportProjects}</span>
+        <span class="row-hint">{$strings.autoImportHint}</span>
       </div>
       <button
         class="toggle-switch"
@@ -115,7 +119,7 @@
     width: 42px; height: 42px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .header-icon.productivity { background: rgba(16,185,129,0.1); color: #10b981; }
+  .header-icon.productivity { background: var(--accent-green-hover, rgba(16,185,129,0.1)); color: var(--accent-green, #10b981); }
   .header-text h3 { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--text); }
   .header-text p  { margin: 0.25rem 0 0 0; font-size: 0.8125rem; color: var(--text-muted); }
   .card-content   { display: flex; flex-direction: column; gap: 1rem; }
@@ -138,11 +142,6 @@
   }
   .premium-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px var(--focus-ring); }
   .premium-input.number { width: 4rem; text-align: center; }
-  .premium-input.select {
-    cursor: pointer; appearance: none; padding-right: 2rem;
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width%3D'292' height%3D'292'%3E%3Cpath fill%3D'%239CA3AF' d%3D'M287 69a18 18 0 0 0-13-5H18a18 18 0 0 0-13 18c0 5 2 9 5 13l128 128c4 4 8 5 13 5s9-1 13-5l128-128c4-3 5-8 5-13a18 18 0 0 0-5-13z'%2F%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 8px auto;
-  }
   .unit-label { font-size: 0.875rem; color: var(--text-muted); }
 
   /* ── Toggle switch ────────────────────────────────────────────────────── */

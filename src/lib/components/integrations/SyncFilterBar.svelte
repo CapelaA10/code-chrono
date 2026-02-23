@@ -5,6 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { Search, RefreshCw } from 'lucide-svelte';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   export let search: string = '';
   export let filterProject: string = '';
@@ -15,6 +16,7 @@
   export let allProjects: string[] = [];
   /** Unique label names across all fetched issues. */
   export let allLabels: string[] = [];
+  import { strings } from '$lib/i18n/store';
 
   const dispatch = createEventDispatcher<{ refresh: void }>();
 </script>
@@ -32,17 +34,25 @@
   <!-- Dropdowns + toggle -->
   <div class="select-row">
     {#if allProjects.length > 0}
-      <select bind:value={filterProject} class="mini-select">
-        <option value="">All projects</option>
-        {#each allProjects as p}<option value={p}>{p}</option>{/each}
-      </select>
+      <div style="width: 130px;">
+        <Dropdown
+          value={filterProject}
+          placeholder={$strings.allProjects}
+          options={[{ value: '', label: $strings.allProjects }, ...allProjects.map(p => ({ value: p, label: p }))]}
+          on:change={(e) => filterProject = e.detail}
+        />
+      </div>
     {/if}
 
     {#if allLabels.length > 0}
-      <select bind:value={filterLabel} class="mini-select">
-        <option value="">All labels</option>
-        {#each allLabels as l}<option value={l}>{l}</option>{/each}
-      </select>
+      <div style="width: 130px;">
+        <Dropdown
+          value={filterLabel}
+          placeholder={$strings.allLabels}
+          options={[{ value: '', label: $strings.allLabels }, ...allLabels.map(l => ({ value: l, label: l }))]}
+          on:change={(e) => filterLabel = e.detail}
+        />
+      </div>
     {/if}
 
     <label class="mini-toggle">
@@ -74,13 +84,6 @@
 
   .select-row {
     display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
-  }
-
-  .mini-select {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 6px; padding: 0.25rem 0.5rem;
-    font-size: 0.75rem; color: var(--text); outline: none;
-    cursor: pointer; font-family: inherit; max-width: 130px;
   }
 
   .mini-toggle {

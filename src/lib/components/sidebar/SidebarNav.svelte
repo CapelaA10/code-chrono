@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { projects, tags, filterProject, filterTag, refreshProjects, refreshTags, refreshTasks } from '$lib/stores/tasks';
-  import { Plus, Hash, Folder, LayoutGrid, Trash2 } from 'lucide-svelte';
+  import { Plus, Hash, Folder, LayoutGrid, Trash2, CalendarDays, BarChart2 } from 'lucide-svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { strings } from '$lib/i18n/store';
   import InlineCreateForm from './InlineCreateForm.svelte';
 
   let showProjectForm = false;
@@ -99,14 +100,23 @@
     on:click={selectAll}
   >
     <LayoutGrid size={18} />
-    <span>All Tasks</span>
+    <span>{$strings.allTasks}</span>
   </button>
+  <a href="/calendar" class="nav-item">
+    <CalendarDays size={18} />
+    <span>{$strings.calendar}</span>
+  </a>
+  <a href="/stats" class="nav-item">
+    <BarChart2 size={18} />
+    <span>{$strings.statistics}</span>
+  </a>
 </nav>
+
 
 <!-- Projects -->
 <div class="nav-section">
   <div class="section-header">
-    <h3>Projects</h3>
+    <h3>{$strings.projects}</h3>
     <button class="add-btn" on:click={openProjectForm} title="Add project">
       <Plus size={16} />
     </button>
@@ -139,7 +149,7 @@
 <!-- Tags -->
 <div class="nav-section">
   <div class="section-header">
-    <h3>Tags</h3>
+    <h3>{$strings.tags}</h3>
     <button class="add-btn" on:click={openTagForm} title="Add tag">
       <Plus size={16} />
     </button>

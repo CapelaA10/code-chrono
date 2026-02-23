@@ -29,14 +29,18 @@ The community gave Pedro everything — every library, tutorial, and answered St
 
 | Feature | Description |
 |---|---|
-| ⏱ **Pomodoro Timer** | Customizable session durations, idle detection, system notifications |
-| 📋 **Task Management** | Projects, tags, priorities, due dates, drag-to-reorder |
-| 🔗 **Integrations** | Selectively import issues from GitHub, GitLab, and Jira with preview & filter |
-| 🔍 **Task Filters** | Filter your task list by project, tag, and status with dismissible pill chips |
-| 📊 **Statistics** | Time-by-task, daily breakdown, custom date ranges, CSV export |
+| ⏱ **Pomodoro Timer** | Sessions, automatic breaks (short/long), idle detection, notifications |
+| 📋 **Task Management** | Projects, tags, priorities, task templates, drag-to-reorder |
+| ☕ **Break Timer** | Seamless transitions from Pomodoro sessions into short or long breaks |
+| 📅 **Calendar** | Monthly grid view tracking tasks with scheduled due dates |
+| 🔗 **Integrations** | Selectively import issues from GitHub, GitLab, and Jira |
+| 🔍 **Task Filters** | Filter your task list by project, tag, and status with dismissible chips |
+| 📊 **Statistics** | Time-by-task, daily breakdown, 12-week heatmap, bar charts, CSV export |
+| 🌍 **Localization** | Interface available in English, Portuguese (PT/BR), Spanish, and Greek |
+| 🔄 **Auto Updates** | Completely silent, secure background updates powered by Minisign and Tauri |
 | ⌨️ **Global Hotkey** | `Ctrl+Shift+P` (or `⌘⇧P` on Mac) to pause/resume from anywhere |
-| 🌙 **Dark Mode** | Light and dark themes, persisted per device |
-| 🔒 **Privacy First** | All data stored locally in SQLite — nothing sent to any server |
+| 🌙 **Dark Mode** | Light and dark themes natively integrated, persisted per device |
+| 🔒 **Privacy First** | All data (including task templates) stored locally in SQLite — nothing sent to any server |
 
 ---
 
@@ -136,7 +140,11 @@ Binaries are output to `src-tauri/target/release/bundle/`.
 code-chrono/
 ├── src/                          # Svelte frontend
 │   ├── lib/
-│   │   ├── components/
+│   │   │   ├── components/
+│   │   │   ├── calendar/
+│   │   │   │   ├── CalendarCell.svelte
+│   │   │   │   ├── CalendarGrid.svelte
+│   │   │   │   └── CalendarHeader.svelte
 │   │   │   ├── integrations/
 │   │   │   │   ├── syncTypes.ts                # Shared ExternalTask interface
 │   │   │   │   ├── SyncPreviewModal.svelte     # Orchestrator: state + async logic
@@ -158,22 +166,36 @@ code-chrono/
 │   │   │   ├── stats/
 │   │   │   │   ├── StatsSummary.svelte
 │   │   │   │   ├── StatsTimeByTask.svelte
-│   │   │   │   └── StatsDailyBreakdown.svelte
+│   │   │   │   ├── StatsDailyBreakdown.svelte
+│   │   │   │   ├── StatsHeatmap.svelte         # Weekly activity heatmap
+│   │   │   │   └── StatsBarChart.svelte        # Inline total visualization
 │   │   │   ├── task/
 │   │   │   │   ├── TaskFilterBar.svelte        # Project / tag / status filter bar
 │   │   │   │   ├── TaskEditModal.svelte
 │   │   │   │   ├── TaskCheckbox.svelte
-│   │   │   │   └── TaskMeta.svelte
+│   │   │   │   ├── TaskMeta.svelte
+│   │   │   │   ├── TemplatePickerModal.svelte
+│   │   │   │   └── TemplateSaveButton.svelte
 │   │   │   ├── timer/
-│   │   │   │   └── TimerWidget.svelte
+│   │   │   │   ├── TimerWidget.svelte
+│   │   │   │   └── BreakBanner.svelte          # Session completion banner
 │   │   │   ├── Header.svelte
 │   │   │   ├── QuickAdd.svelte
 │   │   │   ├── Sidebar.svelte
 │   │   │   ├── TaskItem.svelte
 │   │   │   ├── TaskList.svelte
 │   │   │   └── ThemeToggle.svelte
+│   │   ├── i18n/
+│   │   │   ├── locales/
+│   │   │   │   ├── en.ts
+│   │   │   │   ├── pt.ts
+│   │   │   │   ├── es.ts
+│   │   │   │   ├── el.ts
+│   │   │   │   └── br.ts
+│   │   │   └── store.ts           # Locale store and t() helper
 │   │   ├── stores/
 │   │   │   ├── tasks.ts           # Reactive stores + refreshAll() + filter stores
+│   │   │   ├── templates.ts       # localStorage-backed task template store
 │   │   │   ├── theme.ts
 │   │   │   ├── timer.ts
 │   │   │   ├── timerSettings.ts
@@ -185,6 +207,8 @@ code-chrono/
 │   └── routes/
 │       ├── +layout.svelte         # App shell (sidebar + main area)
 │       ├── +page.svelte           # Main task view (includes TaskFilterBar)
+│       ├── calendar/
+│       │   └── +page.svelte       # Calendar view orchestration
 │       ├── settings/
 │       │   └── +page.svelte       # Thin orchestrator; composes settings sub-components
 │       └── stats/
@@ -234,7 +258,7 @@ git push origin main
 4. Go to your repository's [Actions tab](https://github.com/CapelaA10/code-chrono/actions) to watch the CI runners compile the binaries for each OS natively.
 5. In ~15 minutes, a new **Draft Release** with all your application installers attached will be automatically published on your GitHub repository!
 
-*Note: Since these binaries are currently unsigned, Windows users may need to bypass SmartScreen by clicking "More info" > "Run anyway". macOS users are highly encouraged to use the `install.sh` script described in the Installation section to automatically sidestep Gatekeeper.*
+*Note: Official releases are now signed with Minisign for secure automated updates. However, since the binaries themselves are not yet signed with an EV certificate, Windows users may still see a SmartScreen warning ("More info" > "Run anyway") and macOS users are encouraged to use the `install.sh` script to sidestep Gatekeeper.*
 
 ---
 
@@ -250,11 +274,10 @@ Contributions are welcome! Here's how:
 6. **Open a Pull Request**
 
 ### Areas Welcome for Contribution
-- Improved statistics and charts
-- Calendar view for tasks with due dates
-- Break timer / Pomodoro break phase
-- Task templates
-- Localization / i18n
+- Advanced reporting and data visualizations
+- Additional third-party integrations (e.g., Trello, Asana, Linear)
+- Custom sound packs for timer notifications
+- Interactive desktop widgets
 
 ---
 
@@ -263,3 +286,5 @@ Contributions are welcome! Here's how:
 MIT © [Pedro Capela](https://github.com/CapelaA10)
 
 See [LICENSE](./LICENSE) for details.
+
+---

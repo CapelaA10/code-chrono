@@ -87,14 +87,46 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.2.0] — 2026-02-22 · Selective Import & UX Polish
+## [0.2.0] — 2026-02-22 · Feature Expansion & UX Polish
 
 ### Added
+
+#### 🗺️ Localization (i18n)
+- Added full interface translation support.
+- Available languages: English 🇬🇧, European Portuguese 🇵🇹, Brazilian Portuguese 🇧🇷, Spanish 🇪🇸, and Greek 🇬🇷.
+- Language switcher available in Settings -> Appearance.
+
+#### 📅 Calendar View
+- New dedicated `/calendar` page to view tasks based on their due dates.
+- Monthly grid view displaying up to 3 task pills per day with color-coded overdue highlighting.
+- Left sidebar navigation link added under "All Tasks".
+
+#### ☕ Break Timer
+- Pomodoro sessions now seamlessly transition into breaks.
+- Unobtrusive break banner appears when a session finishes, offering a "Short Break" (5m) or "Long Break" (15m).
+- Break phases explicitly tracked in the Rust backend state.
+
+#### 📈 Enhanced Statistics
+- **Activity Heatmap**: 12-week GitHub-style contribution grid charting daily time logged.
+- **Daily Totals**: Scaled SVG bar chart visualizing the history of tracked time.
+- Overview toggle ("Charts" vs "Details") integrated into the main Statistics page.
+
+#### 📋 Task Templates
+- Save repetitive configurations as reusable templates directly from the Task Edit modal.
+- Apply templates with a single click via the new Template Picker modal.
+- Templates are stored securely offline in `localStorage`.
 
 #### 🔄 Automatic Updates
 - Bundled **@tauri-apps/plugin-updater** for completely silent background updates.
 - App checks for updates silently on launch. If found, automatically downloads them.
 - Beautiful unobtrusive pill toast appears bottom-right while downloading, then turns green to prompt restart when ready.
+- **Security**: Updates are now signed with Minisign and verified via public key in `tauri.conf.json`, ensuring secure and tamper-proof delivery.
+
+#### 🎨 UI/UX Theme Unification & Polish
+- Systematic sweep of all components to remove hardcoded hex colors (`#10b981`, `#ef4444`, `#2563eb`) and `rgba` values.
+- Implemented `color-mix(in srgb, ...)` for translucent hover states and pill backgrounds to natively support dynamic light/dark themes.
+- Unified drop shadows across the app (modals, toasts, dropdowns, and date pickers) leveraging global `--shadow`, `--shadow-sm`, and `--shadow-lg` properties for depth consistency.
+- Standardized interactive buttons globally to use `--transition` and a relative filter-based hover to respond dynamically to their base color inputs.
 
 #### ℹ️ About Dialog
 - New **About** button in the sidebar footer (below Settings)
@@ -174,6 +206,9 @@ The monolithic `SyncPreviewModal.svelte` (456 lines) has been split into:
 | `commands/sync.rs` | Added `preview_sync_*`, `import_selected` (with `import_projects` param) |
 | `database/projects.rs` | Added `find_or_create()` — idempotent project creation |
 | `database/tasks.rs` | Added `is_imported()` helper |
+
+### Struct Updates
+- **`TimerState`**: Added `phase: number` (0 = work session, 1 = short break, 2 = long break) to orchestrate Pomodoro cycles.
 
 ---
 

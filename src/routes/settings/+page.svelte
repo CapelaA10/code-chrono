@@ -5,6 +5,7 @@
   import SettingsIntegrations  from '$lib/components/settings/SettingsIntegrations.svelte';
   import SettingsDataManagement from '$lib/components/settings/SettingsDataManagement.svelte';
   import SettingsDangerZone    from '$lib/components/settings/SettingsDangerZone.svelte';
+  import { strings } from '$lib/i18n/store';
 
   // ── Toast state ──────────────────────────────────────────────────────────
   let message = '';
@@ -28,10 +29,10 @@
     <div class="settings-header">
       <a href="/" class="back-link">
         <ArrowLeft size={20} />
-        <span>Dashboard</span>
+        <span>{$strings.dashboard}</span>
       </a>
-      <h1 class="settings-title">Preferences</h1>
-      <p class="settings-subtitle">Customize your experience and manage integrations</p>
+      <h1 class="settings-title">{$strings.preferences}</h1>
+      <p class="settings-subtitle">{$strings.preferencesDesc}</p>
     </div>
 
     <div class="settings-grid">
@@ -110,12 +111,12 @@
   /* ── Toast ────────────────────────────────────────────────────────────── */
   .toast {
     position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
-    background: #1f2937; color: white; padding: 0.75rem 1.5rem; border-radius: 99px;
-    border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 1000;
+    background: var(--btn-primary-bg); color: var(--btn-primary-text); padding: 0.75rem 1.5rem; border-radius: 99px;
+    border: none; box-shadow: var(--shadow-lg); z-index: 1000;
     cursor: pointer; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .toast.success { background: #10b981; }
-  .toast.error   { background: #ef4444; }
+  .toast.success { background: var(--accent-green); }
+  .toast.error   { background: var(--error-red); }
   .toast-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; font-weight: 600; }
 
   @keyframes slideUp {

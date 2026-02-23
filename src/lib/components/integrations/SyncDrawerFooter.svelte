@@ -4,6 +4,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { Download, RefreshCw } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   export let selectedCount: number = 0;
   export let importBusy: boolean = false;
@@ -20,14 +21,14 @@
   {#if projectCount > 0}
     <label class="mini-toggle footer-toggle">
       <input type="checkbox" bind:checked={importProjects} />
-      Import projects ({projectCount})
+      {$strings.autoCreateProjects} ({projectCount})
     </label>
   {/if}
 
   {#if labelCount > 0}
     <label class="mini-toggle footer-toggle">
       <input type="checkbox" bind:checked={importLabels} />
-      Import labels as tags ({labelCount})
+      {$strings.importLabelsAsTags} ({labelCount})
     </label>
   {/if}
 
@@ -36,7 +37,7 @@
   {/if}
 
   <div class="footer-actions">
-    <button class="btn secondary" on:click={() => dispatch('cancel')}>Cancel</button>
+    <button class="btn secondary" on:click={() => dispatch('cancel')}>{$strings.cancel}</button>
     <button
       class="btn primary"
       on:click={() => dispatch('import')}
@@ -47,7 +48,7 @@
       {:else}
         <Download size={13} />
       {/if}
-      {importBusy ? 'Importing…' : `Import ${selectedCount}`}
+      {importBusy ? 'Importing…' : `${$strings.importSelected} (${selectedCount})`}
     </button>
   </div>
 </div>
@@ -76,7 +77,7 @@
     transition: all 0.15s; border: none; font-family: inherit;
   }
   .btn.primary { background: var(--accent-blue); color: white; }
-  .btn.primary:hover:not(:disabled) { background: #2563eb; }
+  .btn.primary:hover:not(:disabled) { filter: brightness(0.9); }
   .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
   .btn.secondary:hover { background: var(--btn-secondary-hover-bg); }

@@ -3,7 +3,9 @@
   import SidebarNav from './sidebar/SidebarNav.svelte';
   import SidebarIntegrations from './sidebar/SidebarIntegrations.svelte';
   import AboutDialog from './AboutDialog.svelte';
-  import { Settings, BarChart2, Info } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
+  import { page } from '$app/stores';
+  import { Settings, Info } from 'lucide-svelte';
 
   let showAbout = false;
 </script>
@@ -12,20 +14,17 @@
   <SidebarLogo />
   <div class="sidebar-scroll">
     <SidebarNav />
+
     <SidebarIntegrations />
   </div>
   <div class="sidebar-footer">
-    <a href="/stats" class="footer-item">
-      <BarChart2 size={18} />
-      <span>Statistics</span>
-    </a>
-    <a href="/settings" class="footer-item">
+    <a href="/settings" class="footer-item" class:active={$page.url.pathname === '/settings'}>
       <Settings size={18} />
-      <span>Settings</span>
+      <span>{$strings.settings}</span>
     </a>
     <button class="footer-item about-btn" on:click={() => showAbout = true}>
       <Info size={18} />
-      <span>About</span>
+      <span>{$strings.about}</span>
     </button>
   </div>
 </aside>

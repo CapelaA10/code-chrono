@@ -6,6 +6,7 @@
 <script lang="ts">
   import type { DailyStat } from '$lib/types';
   import { formatDuration, formatDayLabel } from '$lib/utils/format';
+  import { strings } from '$lib/i18n/store';
 
   /** Pre-grouped by the parent page: Record<"YYYY-MM-DD", DailyStat[]> */
   export let dailyGroups: Record<string, DailyStat[]>;
@@ -15,7 +16,7 @@
 
 {#if days.length > 0}
   <section>
-    <h2 class="section-title">Daily Breakdown</h2>
+    <h2 class="section-title">{$strings.dailyBreakdown}</h2>
 
     <ul class="day-list">
       {#each days as [day, dayStats] (day)}

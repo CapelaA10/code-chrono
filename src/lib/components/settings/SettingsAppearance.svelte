@@ -1,6 +1,14 @@
+<!--
+  SettingsAppearance.svelte
+  ─────────────────────────
+  Compact card for theme (light/dark) and language selection.
+-->
 <script lang="ts">
   import { theme } from '$lib/stores/theme';
+  import { locale, LOCALE_OPTIONS } from '$lib/i18n/store';
   import { Sun, Moon } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   function setTheme(t: 'light' | 'dark') { theme.set(t); }
 </script>
@@ -8,7 +16,7 @@
 <div class="settings-card">
   <div class="card-header">
     <div>
-      <h3>Appearance</h3>
+      <h3>{$strings.appearance}</h3>
       <p>Personalize how the application looks</p>
     </div>
     <!-- Compact inline theme pill -->
@@ -19,7 +27,7 @@
         on:click={() => setTheme('light')}
         title="Light mode"
       >
-        <Sun size={14} /><span>Light</span>
+        <Sun size={14} /><span>{$strings.light}</span>
       </button>
       <button
         class="theme-btn"
@@ -27,8 +35,25 @@
         on:click={() => setTheme('dark')}
         title="Dark mode"
       >
-        <Moon size={14} /><span>Dark</span>
+        <Moon size={14} /><span>{$strings.dark}</span>
       </button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Language selector -->
+  <div class="lang-row">
+    <div class="row-info">
+      <span class="row-label">{$strings.language}</span>
+      <span class="row-hint">Interface display language</span>
+    </div>
+    <div style="min-width: 140px;">
+      <Dropdown
+        value={$locale}
+        options={LOCALE_OPTIONS}
+        on:change={(e) => $locale = e.detail}
+      />
     </div>
   </div>
 </div>
@@ -53,6 +78,18 @@
 
   .card-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text); }
   .card-header p  { margin: 0.2rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+
+  .divider { height: 1px; background: var(--border); margin: 1rem 0; }
+
+  .lang-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .row-info { display: flex; flex-direction: column; gap: 0.2rem; }
+  .row-label { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+  .row-hint  { font-size: 0.75rem; color: var(--text-muted); }
 
   /* Compact pill toggle */
   .theme-pill {

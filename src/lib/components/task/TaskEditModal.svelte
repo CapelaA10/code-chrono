@@ -10,6 +10,12 @@
   import { createEventDispatcher } from 'svelte';
   import { X, Check } from 'lucide-svelte';
   import type { Task, Tag, Project } from '$lib/types';
+  import TemplatePickerModal from '$lib/components/task/TemplatePickerModal.svelte';
+  import TemplateSaveButton from '$lib/components/task/TemplateSaveButton.svelte';
+  import { saveTemplate, type TaskTemplate } from '$lib/stores/templates';
+  import { strings } from '$lib/i18n/store';
+  import DatePicker from '$lib/components/DatePicker.svelte';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   export let task: Task;
   export let tags: Tag[];
@@ -35,7 +41,7 @@
   // Focus the title field as soon as the modal mounts
   $: if (titleInput) setTimeout(() => titleInput.focus(), 50);
 
-  const PRIORITY_OPTIONS = ['None', 'Low', 'Medium', 'High'] as const;
+  let showTemplates = false;
 
   // ── Event handlers ─────────────────────────────────────────────────────────
 
@@ -43,6 +49,28 @@
     selectedTagIds = selectedTagIds.includes(id)
       ? selectedTagIds.filter(t => t !== id)
       : [...selectedTagIds, id];
+  }
+
+  function handleSaveTemplate(e: CustomEvent<{ name: string }>) {
+    saveTemplate({
+      id: crypto.randomUUID(),
+      name: e.detail.name,
+      title: title.trim(),
+      description: description.trim(),
+      priority,
+      project_id: projectId,
+      tagIds: [...selectedTagIds]
+    });
+  }
+
+  function applyTemplate(e: CustomEvent<TaskTemplate>) {
+    const t = e.detail;
+    title = t.title;
+    description = t.description;
+    priority = t.priority;
+    projectId = t.project_id;
+    selectedTagIds = t.tagIds ? [...t.tagIds] : [];
+    showTemplates = false;
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -88,15 +116,21 @@
 
     <!-- Header -->
     <div class="modal-header">
-      <h2>Edit Task</h2>
-      <button class="icon-btn" on:click={() => dispatch('close')} title="Close">
-        <X size={18} />
-      </button>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <h2>{$strings.editTask}</h2>
+        <TemplateSaveButton on:save={handleSaveTemplate} />
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" on:click={() => showTemplates = true}>{$strings.useTemplate}</button>
+        <button class="icon-btn" on:click={() => dispatch('close')} title="Close">
+          <X size={18} />
+        </button>
+      </div>
     </div>
 
     <!-- Title -->
     <div class="field">
-      <label class="field-label" for="edit-title">Title <span class="required">*</span></label>
+      <label class="field-label" for="edit-title">{$strings.title} <span class="required">*</span></label>
       <input
         id="edit-title"
         bind:this={titleInput}
@@ -110,7 +144,7 @@
 
     <!-- Description -->
     <div class="field">
-      <label class="field-label" for="edit-desc">Description</label>
+      <label class="field-label" for="edit-desc">{$strings.description}</label>
       <textarea
         id="edit-desc"
         bind:value={description}
@@ -123,34 +157,45 @@
     <!-- Priority · Project · Due Date (3-column row) -->
     <div class="field-row">
       <div class="field">
-        <label class="field-label" for="edit-priority">Priority</label>
-        <select id="edit-priority" bind:value={priority} class="input">
-          {#each PRIORITY_OPTIONS as label, i}
-            <option value={i}>{label}</option>
-          {/each}
-        </select>
+        <label class="field-label" for="edit-priority">{$strings.priority}</label>
+        <Dropdown
+          id="edit-priority"
+          value={priority}
+          placeholder={$strings.none}
+          options={[
+            { value: 0, label: $strings.none },
+            { value: 1, label: $strings.low },
+            { value: 2, label: $strings.medium },
+            { value: 3, label: $strings.high }
+          ]}
+          on:change={(e) => priority = e.detail}
+        />
       </div>
 
       <div class="field">
-        <label class="field-label" for="edit-project">Project</label>
-        <select id="edit-project" bind:value={projectId} class="input">
-          <option value={null}>None</option>
-          {#each projects as p (p.id)}
-            <option value={p.id}>{p.name}</option>
-          {/each}
-        </select>
+        <label class="field-label" for="edit-project">{$strings.project}</label>
+        <Dropdown
+          id="edit-project"
+          value={projectId ?? ''}
+          placeholder={$strings.none}
+          options={[
+            { value: '', label: $strings.none },
+            ...projects.map(p => ({ value: p.id, label: p.name }))
+          ]}
+          on:change={(e) => projectId = e.detail === '' ? null : e.detail}
+        />
       </div>
 
       <div class="field">
-        <label class="field-label" for="edit-due">Due Date</label>
-        <input id="edit-due" bind:value={dueDate} type="date" class="input" />
+        <label class="field-label" for="edit-due">{$strings.dueDate}</label>
+        <DatePicker bind:value={dueDate} placeholder={$strings.dueDate} />
       </div>
     </div>
 
     <!-- Tags (fieldset for a11y) -->
     {#if tags.length > 0}
       <fieldset class="field tags-fieldset">
-        <legend class="field-label">Tags</legend>
+        <legend class="field-label">{$strings.tags}</legend>
         <div class="tag-picker">
           {#each tags as tag (tag.id)}
             <button
@@ -168,18 +213,25 @@
 
     <!-- Footer -->
     <div class="modal-footer">
-      <span class="hint">Ctrl+Enter to save · Esc to cancel</span>
+      <span class="hint">Ctrl+Enter ── Esc</span>
       <div class="footer-actions">
-        <button class="btn-secondary" on:click={() => dispatch('close')}>Cancel</button>
+        <button class="btn-secondary" on:click={() => dispatch('close')}>{$strings.cancel}</button>
         <button class="btn-primary" on:click={submit} disabled={!title.trim()}>
           <Check size={16} />
-          Save
+          {$strings.save}
         </button>
       </div>
     </div>
 
   </div>
 </div>
+
+{#if showTemplates}
+  <TemplatePickerModal
+    on:selected={applyTemplate}
+    on:close={() => showTemplates = false}
+  />
+{/if}
 
 <style>
   /* ── Overlay ── */
@@ -377,6 +429,6 @@
     transition: background 0.15s;
   }
 
-  .btn-primary:hover:not(:disabled) { background: #2563eb; }
+  .btn-primary:hover:not(:disabled) { filter: brightness(0.9); }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

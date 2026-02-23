@@ -1,5 +1,6 @@
 <script lang="ts">
   import SyncPreviewModal from '$lib/components/integrations/SyncPreviewModal.svelte';
+  import { strings } from '$lib/i18n/store';
 
   let activeSource: string | null = null;
 
@@ -14,7 +15,7 @@
 
 <div class="nav-section">
   <div class="section-header">
-    <h3>Integrations</h3>
+    <h3>{$strings.integrations}</h3>
   </div>
   <div class="section-list">
 

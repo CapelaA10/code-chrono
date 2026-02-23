@@ -89,7 +89,7 @@
     font-weight: 500;
   }
 
-  .spin {
+  :global(.spin) {
     animation: spin 2s linear infinite;
     color: var(--primary);
   }

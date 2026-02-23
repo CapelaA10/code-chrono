@@ -41,6 +41,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Timer
             commands::timer::start_pomodoro,
+            commands::timer::start_break,
             commands::timer::pause_timer,
             commands::timer::get_timer,
             commands::timer::reset_timer,

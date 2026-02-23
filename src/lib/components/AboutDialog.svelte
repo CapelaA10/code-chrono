@@ -133,7 +133,7 @@
     border: 1px solid var(--border);
     border-radius: 1.5rem;
     overflow-y: auto;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-lg);
     animation: appear 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     scrollbar-width: none;
   }
@@ -165,7 +165,7 @@
     display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
     color: white;
-    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+    box-shadow: var(--shadow);
   }
 
   .app-name {
@@ -179,7 +179,7 @@
     margin-top: 0.3rem;
     font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 99px;
-    background: rgba(99, 102, 241, 0.1); color: #6366f1;
+    background: color-mix(in srgb, var(--accent-blue) 10%, transparent); color: var(--accent-blue);
     border: 1px solid rgba(99, 102, 241, 0.2);
   }
 
@@ -254,5 +254,5 @@
     font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
   }
 
-  :global(.heart-icon) { color: #ef4444; flex-shrink: 0; }
+  :global(.heart-icon) { color: var(--error-red); flex-shrink: 0; }
 </style>

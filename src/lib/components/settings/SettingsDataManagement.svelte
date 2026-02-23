@@ -4,6 +4,7 @@
   import { writeTextFile } from '@tauri-apps/plugin-fs';
   import { createEventDispatcher } from 'svelte';
   import { Database, Download, Upload } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   const dispatch = createEventDispatcher<{ message: { text: string; type: 'success' | 'error' } }>();
 
@@ -48,7 +49,7 @@
       <Database size={20} />
     </div>
     <div class="header-text">
-      <h3>Data Management</h3>
+      <h3>{$strings.dataManagement}</h3>
       <p>Import or export your time records</p>
     </div>
   </div>
@@ -56,11 +57,11 @@
     <div class="action-grid">
       <button class="premium-btn primary" on:click={exportCSV} disabled={exportBusy}>
         <Download size={18} />
-        <span>{exportBusy ? 'Exporting…' : 'Export CSV'}</span>
+        <span>{exportBusy ? 'Exporting…' : $strings.exportData}</span>
       </button>
       <button class="premium-btn secondary" on:click={importCSV} disabled={importBusy}>
         <Upload size={18} />
-        <span>{importBusy ? 'Importing…' : 'Import CSV'}</span>
+        <span>{importBusy ? 'Importing…' : $strings.importCsv}</span>
       </button>
     </div>
   </div>
@@ -70,9 +71,9 @@
   .settings-card {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: 1.25rem; padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: box-shadow 0.2s;
+    box-shadow: var(--shadow-lg); transition: box-shadow 0.2s;
   }
-  .settings-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
+  .settings-card:hover { box-shadow: var(--shadow); }
   .card-header { display: flex; gap: 1rem; margin-bottom: 2rem; }
   .header-icon {
     width: 42px; height: 42px; border-radius: 12px;
@@ -89,7 +90,7 @@
     cursor: pointer; transition: all 0.2s; border: none; font-family: inherit;
   }
   .premium-btn.primary  { background: var(--accent-blue); color: white; }
-  .premium-btn.primary:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+  .premium-btn.primary:hover:not(:disabled) { filter: brightness(0.9); transform: translateY(-1px); }
   .premium-btn.secondary {
     background: var(--bg-page); border: 1px solid var(--border); color: var(--text);
   }

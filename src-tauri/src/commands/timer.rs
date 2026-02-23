@@ -110,6 +110,45 @@ pub async fn start_pomodoro(
     Ok(())
 }
 
+/// Start a break session (short or long).
+#[tauri::command]
+pub async fn start_break(
+    state:    State<'_, Arc<Mutex<TimerState>>>,
+    db_state: State<'_, Arc<Mutex<Database>>>,
+    handle:   AppHandle,
+    duration_minutes: u64,
+    phase: u8,
+) -> Result<(), String> {
+    let should_spawn_loop = {
+        let mut timer = state.lock().unwrap();
+        let was_running = timer.loop_running;
+        
+        let duration_secs = duration_minutes * 60;
+        let now = now_secs();
+        timer.remaining         = duration_secs;
+        timer.session_duration  = duration_secs;
+        timer.session_start_time = now;
+        timer.last_activity     = now;
+        timer.paused            = false;
+        timer.phase             = phase;
+        timer.task_active       = true;
+        timer.active_task_name  = Some(String::from("Break"));
+        timer.loop_running      = true;
+        
+        !was_running
+    };
+
+    db_state.lock().unwrap().log_action("Break", "start", 0, phase).unwrap_or(());
+    if should_spawn_loop {
+        spawn_tick_loop(Arc::clone(&*state), Arc::clone(&*db_state), handle.clone());
+    }
+
+    let snapshot = state.lock().unwrap().clone();
+    let _ = handle.emit("timer-tick", snapshot);
+
+    Ok(())
+}
+
 /// Toggle pause/resume. Also restarts the tick loop if we're resuming.
 #[tauri::command]
 pub fn pause_timer(

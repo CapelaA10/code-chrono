@@ -4,6 +4,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { X } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   /** "GitHub" | "GitLab" | "Jira" */
   export let source: string;
@@ -17,7 +18,7 @@
 <div class="drawer-header">
   <div class="header-left">
     <span class="source-tag">{source}</span>
-    <span class="header-title">Import Issues</span>
+    <span class="header-title">{$strings.importIssues}</span>
   </div>
   <div class="header-right">
     {#if showCounts}
