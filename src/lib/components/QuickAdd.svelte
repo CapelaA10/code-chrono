@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { Plus, Search, X } from 'lucide-svelte';
+  import { Plus, Search, X, FileText } from 'lucide-svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import TemplatePickerModal from '$lib/components/task/TemplatePickerModal.svelte';
   import { refreshTasks, searchQuery, searchTasks, projects, tags } from '$lib/stores/tasks';
   import { filterProject } from '$lib/stores/tasks';
+  import { strings } from '$lib/i18n/store';
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
 
@@ -10,6 +12,7 @@
   let inputValue = '';
   let isSearchMode = false;
   let showSuccess = false;
+  let showTemplates = false;
 
   // Detect if user is searching vs adding:
   // - If it starts with '/' or selection shifts to search mode explicitly, search
@@ -58,6 +61,30 @@
     showSuccess = true;
     setTimeout(() => showSuccess = false, 2000);
     refreshTasks();
+  }
+
+  async function createTaskFromTemplate(t: any) {
+    await invoke('create_task', {
+      task: {
+        id: 0,
+        title: t.title,
+        description: t.description,
+        status: 'todo',
+        priority: t.priority,
+        project_id: t.project_id,
+        created_at: Math.floor(Date.now() / 1000),
+        position: 0,
+        tags: t.tagIds ? get(tags).filter(tag => t.tagIds.includes(tag.id)) : []
+      }
+    });
+    showSuccess = true;
+    setTimeout(() => showSuccess = false, 2000);
+    refreshTasks();
+  }
+
+  function applyTemplate(e: CustomEvent<any>) {
+    createTaskFromTemplate(e.detail);
+    showTemplates = false;
   }
 
   function handleInput(e: Event) {
@@ -111,22 +138,34 @@
       bind:this={inputRef}
       type="text"
       bind:value={inputValue}
-      placeholder={isSearchMode ? 'Search tasks...' : 'Add task... (Enter) or /search (Alt+N)'}
+      placeholder={isSearchMode ? $strings.searchTasks : $strings.addTask}
       on:keydown={handleKeydown}
       on:input={handleInput}
     />
     {#if inputValue}
-      <button class="clear-btn" on:click={clearInput} title="Clear">
+      <button class="clear-btn" on:click={clearInput} title={$strings.clear}>
         <X size={16} />
       </button>
-    {:else if showSuccess}
+    {:else}
+      <button class="clear-btn" on:click={() => showTemplates = true} title={$strings.templates}>
+        <FileText size={16} />
+      </button>
+    {/if}
+    {#if showSuccess}
       <div class="success-indicator">✓</div>
     {/if}
   </div>
   {#if isSearchMode}
-    <div class="search-hint">Press Enter to search, Esc to cancel</div>
+    <div class="search-hint">{$strings.searchHint}</div>
   {/if}
 </div>
+
+{#if showTemplates}
+  <TemplatePickerModal
+    on:selected={applyTemplate}
+    on:close={() => showTemplates = false}
+  />
+{/if}
 
 <style>
   .quick-add {

@@ -9,17 +9,38 @@
 
 ---
 
+## 🙋 The Story
+
+Code Chrono was created by **Pedro Capela** — a developer who woke up one too many mornings unable to answer the question: *"what exactly did I work on yesterday?"*
+
+Not just the tasks, but the **time**. The focus. The drift. The rabbit holes. As a developer spread across multiple repos and tools, the cognitive overhead of tracking any of it felt insane — so he stopped trying, and that made things worse.
+
+The idea was simple: attach Pomodoro sessions to real tasks so at the end of the day there's actual *data* to look back at. Seeing patterns made it possible to improve them.
+
+Then the repos multiplied. GitHub issues here, GitLab tickets there, Jira boards somewhere else. Copy-pasting issue titles got old fast — so integrations landed. The import drawer was born so you can selectively pull in only what matters, not sync everything blindly.
+
+The whole thing was built with **Tauri + SvelteKit + Rust**, with AI as a pair-programmer to keep momentum high and the code clean. It follows best practices as closely as possible and ships as a native desktop app — **fully offline, no cloud, no account required**.
+
+The community gave Pedro everything — every library, tutorial, and answered Stack Overflow post. Code Chrono is his way of giving something back. If it helps you, contributing, forking, or even leaving a ⭐ is a meaningful thing to do.
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
 |---|---|
-| ⏱ **Pomodoro Timer** | Customizable session durations, idle detection, system notifications |
-| 📋 **Task Management** | Projects, tags, priorities, due dates, drag-to-reorder |
-| 🔗 **Integrations** | Sync open issues from GitHub, GitLab, and Jira |
-| 📊 **Statistics** | Time-by-task, daily breakdown, custom date ranges, CSV export |
+| ⏱ **Pomodoro Timer** | Sessions, automatic breaks (short/long), idle detection, notifications |
+| 📋 **Task Management** | Projects, tags, priorities, task templates, drag-to-reorder |
+| ☕ **Break Timer** | Seamless transitions from Pomodoro sessions into short or long breaks |
+| 📅 **Calendar** | Monthly grid view tracking tasks with scheduled due dates |
+| 🔗 **Integrations** | Selectively import issues from GitHub, GitLab, and Jira |
+| 🔍 **Task Filters** | Filter your task list by project, tag, and status with dismissible chips |
+| 📊 **Statistics** | Time-by-task, daily breakdown, 12-week heatmap, bar charts, CSV export |
+| 🌍 **Localization** | Interface available in English, Portuguese (PT/BR), Spanish, and Greek |
+| 🔄 **Auto Updates** | Completely silent, secure background updates powered by Minisign and Tauri |
 | ⌨️ **Global Hotkey** | `Ctrl+Shift+P` (or `⌘⇧P` on Mac) to pause/resume from anywhere |
-| 🌙 **Dark Mode** | Light and dark themes, persisted per device |
-| 🔒 **Privacy First** | All data stored locally in SQLite — nothing sent to any server |
+| 🌙 **Dark Mode** | Light and dark themes natively integrated, persisted per device |
+| 🔒 **Privacy First** | All data (including task templates) stored locally in SQLite — nothing sent to any server |
 
 ---
 
@@ -82,19 +103,22 @@ Binaries are output to `src-tauri/target/release/bundle/`.
 1. Go to **Settings → Integrations → GitHub**
 2. Create a [Personal Access Token](https://github.com/settings/tokens) with `repo` (or `public_repo`) scope
 3. Optionally specify a repository (`owner/repo`) — leave blank to fetch all issues assigned to you
-4. Click **Save**, then click the **GitHub** button in the sidebar to sync
+4. Click **Save**, then click **GitHub** in the sidebar to open the import drawer
+5. Filter, select issues, and optionally import GitHub labels as local tags
 
 ### GitLab
 1. Go to **Settings → Integrations → GitLab**
 2. Create a [Personal Access Token](https://gitlab.com/-/profile/personal_access_tokens) with `read_api` scope
 3. Set the host (default: `https://gitlab.com`) and your token
-4. Click **Save**, then sync from the sidebar
+4. Click **Save**, then click **GitLab** in the sidebar to open the import drawer
+5. Filter issues by project or label, select what you want, and optionally import labels as tags
 
 ### Jira
 1. Go to **Settings → Integrations → Jira**
 2. Enter your Atlassian domain (e.g. `company.atlassian.net`)
 3. Create an [API Token](https://id.atlassian.com/manage-profile/security/api-tokens) and enter your email + token
-4. Click **Save**, then sync from the sidebar
+4. Click **Save**, then click **Jira** in the sidebar to open the import drawer
+5. Select the issues you want; Jira labels can be imported as local tags
 
 ---
 
@@ -114,23 +138,103 @@ Binaries are output to `src-tauri/target/release/bundle/`.
 
 ```text
 code-chrono/
-├── src/                    # Svelte frontend
+├── src/                          # Svelte frontend
 │   ├── lib/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── stores/         # Svelte stores (state management)
-│   │   ├── types/          # TypeScript type definitions
-│   │   └── utils/          # Shared utilities (e.g. formatting)
-│   └── routes/             # SvelteKit pages
-│       ├── +page.svelte    # Main task view
-│       ├── settings/       # Settings page
-│       └── stats/          # Statistics page
-└── src-tauri/              # Rust backend
+│   │   │   ├── components/
+│   │   │   ├── calendar/
+│   │   │   │   ├── CalendarCell.svelte
+│   │   │   │   ├── CalendarGrid.svelte
+│   │   │   │   └── CalendarHeader.svelte
+│   │   │   ├── integrations/
+│   │   │   │   ├── syncTypes.ts                # Shared ExternalTask interface
+│   │   │   │   ├── SyncPreviewModal.svelte     # Orchestrator: state + async logic
+│   │   │   │   ├── SyncDrawerHeader.svelte     # Source badge, title, count badges, close
+│   │   │   │   ├── SyncFilterBar.svelte        # Search, project/label selects, hide-imported
+│   │   │   │   ├── SyncIssueList.svelte        # Select-all bar + scrollable issue rows
+│   │   │   │   └── SyncDrawerFooter.svelte     # Import options checkboxes + action buttons
+│   │   │   ├── settings/
+│   │   │   │   ├── SettingsAppearance.svelte   # Compact inline light/dark pill toggle
+│   │   │   │   ├── SettingsProductivity.svelte # Hotkey, idle, timer, auto-import projects
+│   │   │   │   ├── SettingsIntegrations.svelte # GitHub / GitLab / Jira credential forms
+│   │   │   │   ├── SettingsDataManagement.svelte
+│   │   │   │   └── SettingsDangerZone.svelte
+│   │   │   ├── sidebar/
+│   │   │   │   ├── SidebarIntegrations.svelte  # Platform buttons → opens SyncPreviewModal
+│   │   │   │   ├── SidebarNav.svelte
+│   │   │   │   ├── SidebarLogo.svelte
+│   │   │   │   └── InlineCreateForm.svelte
+│   │   │   ├── stats/
+│   │   │   │   ├── StatsSummary.svelte
+│   │   │   │   ├── StatsTimeByTask.svelte
+│   │   │   │   ├── StatsDailyBreakdown.svelte
+│   │   │   │   ├── StatsHeatmap.svelte         # Weekly activity heatmap
+│   │   │   │   └── StatsBarChart.svelte        # Inline total visualization
+│   │   │   ├── task/
+│   │   │   │   ├── TaskFilterBar.svelte        # Project / tag / status filter bar
+│   │   │   │   ├── TaskEditModal.svelte
+│   │   │   │   ├── TaskCheckbox.svelte
+│   │   │   │   ├── TaskMeta.svelte
+│   │   │   │   ├── TemplatePickerModal.svelte
+│   │   │   │   └── TemplateSaveButton.svelte
+│   │   │   ├── timer/
+│   │   │   │   ├── TimerWidget.svelte
+│   │   │   │   └── BreakBanner.svelte          # Session completion banner
+│   │   │   ├── Header.svelte
+│   │   │   ├── QuickAdd.svelte
+│   │   │   ├── Sidebar.svelte
+│   │   │   ├── TaskItem.svelte
+│   │   │   ├── TaskList.svelte
+│   │   │   └── ThemeToggle.svelte
+│   │   ├── i18n/
+│   │   │   ├── locales/
+│   │   │   │   ├── en.ts
+│   │   │   │   ├── pt.ts
+│   │   │   │   ├── es.ts
+│   │   │   │   ├── el.ts
+│   │   │   │   └── br.ts
+│   │   │   └── store.ts           # Locale store and t() helper
+│   │   ├── stores/
+│   │   │   ├── tasks.ts           # Reactive stores + refreshAll() + filter stores
+│   │   │   ├── templates.ts       # localStorage-backed task template store
+│   │   │   ├── theme.ts
+│   │   │   ├── timer.ts
+│   │   │   ├── timerSettings.ts
+│   │   │   └── idle.ts
+│   │   ├── types/
+│   │   │   └── index.ts           # Single source of truth for all TS interfaces
+│   │   └── utils/
+│   │       └── format.ts          # formatTime, formatDuration, formatDate
+│   └── routes/
+│       ├── +layout.svelte         # App shell (sidebar + main area)
+│       ├── +page.svelte           # Main task view (includes TaskFilterBar)
+│       ├── calendar/
+│       │   └── +page.svelte       # Calendar view orchestration
+│       ├── settings/
+│       │   └── +page.svelte       # Thin orchestrator; composes settings sub-components
+│       └── stats/
+│           └── +page.svelte       # Statistics page
+└── src-tauri/                     # Rust backend
     └── src/
-        ├── main.rs         # Tauri app entry point
-        ├── lib.rs          # Command registration & wiring
-        ├── commands/       # Tauri IPC commands grouped by domain
-        ├── database/       # SQLite operations grouped by domain
-        └── integrations.rs # GitHub/GitLab/Jira API clients
+        ├── main.rs
+        ├── lib.rs                 # Command registration & wiring
+        ├── integrations.rs        # GitHub / GitLab / Jira API clients + ExternalTask
+        ├── commands/
+        │   ├── timer.rs
+        │   ├── tasks.rs
+        │   ├── projects.rs
+        │   ├── tags.rs
+        │   ├── settings.rs
+        │   ├── stats.rs
+        │   ├── data.rs
+        │   └── sync.rs            # preview_sync_*, import_selected (labels + projects)
+        └── database/
+            ├── mod.rs             # Database façade
+            ├── models.rs
+            ├── sessions.rs
+            ├── tasks.rs           # + is_imported()
+            ├── projects.rs        # + find_or_create() — idempotent project creation
+            ├── tags.rs
+            └── settings.rs
 ```
 
 ---
@@ -154,7 +258,7 @@ git push origin main
 4. Go to your repository's [Actions tab](https://github.com/CapelaA10/code-chrono/actions) to watch the CI runners compile the binaries for each OS natively.
 5. In ~15 minutes, a new **Draft Release** with all your application installers attached will be automatically published on your GitHub repository!
 
-*Note: Since these binaries are currently unsigned, Windows users may need to bypass SmartScreen by clicking "More info" > "Run anyway". macOS users are highly encouraged to use the `install.sh` script described in the Installation section to automatically sidestep Gatekeeper.*
+*Note: Official releases are now signed with Minisign for secure automated updates. However, since the binaries themselves are not yet signed with an EV certificate, Windows users may still see a SmartScreen warning ("More info" > "Run anyway") and macOS users are encouraged to use the `install.sh` script to sidestep Gatekeeper.*
 
 ---
 
@@ -170,12 +274,10 @@ Contributions are welcome! Here's how:
 6. **Open a Pull Request**
 
 ### Areas Welcome for Contribution
-- Additional integrations (Linear, Notion, Todoist...)
-- Improved statistics and charts
-- Calendar view for tasks with due dates
-- Break timer / Pomodoro break phase
-- Task templates
-- Localization / i18n
+- Advanced reporting and data visualizations
+- Additional third-party integrations (e.g., Trello, Asana, Linear)
+- Custom sound packs for timer notifications
+- Interactive desktop widgets
 
 ---
 
@@ -184,3 +286,5 @@ Contributions are welcome! Here's how:
 MIT © [Pedro Capela](https://github.com/CapelaA10)
 
 See [LICENSE](./LICENSE) for details.
+
+---

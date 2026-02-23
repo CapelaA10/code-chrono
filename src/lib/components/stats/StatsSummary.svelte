@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { strings } from '$lib/i18n/store';
   export let totalSessions: number;
   export let totalHours: number;
   export let remainingMinutes: number;
@@ -6,11 +7,11 @@
 
 <div class="summary-cards">
   <div class="card">
-    <div class="card-label">Total Sessions</div>
+    <div class="card-label">{$strings.totalSessions}</div>
     <div class="card-value">{totalSessions}</div>
   </div>
   <div class="card">
-    <div class="card-label">Total Time</div>
+    <div class="card-label">{$strings.totalTime}</div>
     <div class="card-value">
       {#if totalHours > 0}
         {totalHours}h {remainingMinutes}m

@@ -55,6 +55,15 @@ pub fn save_external(conn: &Connection, task: Task) -> Result<i64> {
     create(conn, task)
 }
 
+/// Returns true when a task with the same `external_id` + `source` pair already
+/// lives in the tasks table (i.e. it was previously imported).
+pub fn is_imported(conn: &Connection, external_id: &str, source: &str) -> Result<bool> {
+    let count: i64 = conn
+        .prepare("SELECT COUNT(*) FROM tasks WHERE external_id = ?1 AND source = ?2")?
+        .query_row([external_id, source], |row| row.get(0))?;
+    Ok(count > 0)
+}
+
 /// Overwrite all editable fields of an existing task.
 /// `completed_at` is set on first completion and preserved on subsequent edits;
 /// it is cleared when a task moves out of 'done'.

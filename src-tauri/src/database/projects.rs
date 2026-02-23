@@ -11,6 +11,18 @@ pub fn create(conn: &Connection, name: &str, color: Option<&str>) -> Result<i64>
     Ok(conn.last_insert_rowid())
 }
 
+/// Return the id of the project with the given name, creating it if it does not exist.
+pub fn find_or_create(conn: &Connection, name: &str) -> Result<i64> {
+    let existing: Option<i64> = conn
+        .prepare("SELECT id FROM projects WHERE name = ?1")?
+        .query_row([name], |row| row.get(0))
+        .ok();
+    if let Some(id) = existing {
+        return Ok(id);
+    }
+    create(conn, name, None)
+}
+
 pub fn list(conn: &Connection) -> Result<Vec<Project>> {
     let mut stmt = conn.prepare("SELECT id, name, color FROM projects ORDER BY name")?;
     let rows = stmt

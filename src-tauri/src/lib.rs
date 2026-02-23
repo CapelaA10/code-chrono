@@ -20,6 +20,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // ── Shared state ───────────────────────────────────────────────────
         .setup(|app| {
             let app_dir = app
@@ -40,6 +41,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Timer
             commands::timer::start_pomodoro,
+            commands::timer::start_break,
             commands::timer::pause_timer,
             commands::timer::get_timer,
             commands::timer::reset_timer,
@@ -69,10 +71,15 @@ pub fn run() {
             commands::data::export_csv,
             commands::data::import_csv,
             commands::data::reset_database,
-            // Integrations
+            // Integrations — legacy one-shot sync
             commands::sync::sync_github,
             commands::sync::sync_jira,
             commands::sync::sync_gitlab,
+            // Integrations — selective import (preview → pick → import)
+            commands::sync::preview_sync_github,
+            commands::sync::preview_sync_jira,
+            commands::sync::preview_sync_gitlab,
+            commands::sync::import_selected,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

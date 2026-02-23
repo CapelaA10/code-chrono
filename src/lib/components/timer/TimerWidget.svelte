@@ -11,6 +11,7 @@
   import { timerDuration } from '$lib/stores/timerSettings';
   import { activeTimer } from '$lib/stores/timer';
   import { formatTime } from '$lib/utils/format';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   // ── Derived State ──────────────────────────────────────────────────────────
 
@@ -67,12 +68,12 @@
 
   <!-- Duration picker (only while idle) -->
   {#if isIdle}
-    <div class="duration-wrap">
-      <select bind:value={$timerDuration} class="duration-select" aria-label="Timer duration">
-        {#each DURATIONS as d}
-          <option value={d}>{d}m</option>
-        {/each}
-      </select>
+    <div class="duration-wrap" style="min-width: 80px;">
+      <Dropdown
+        value={$timerDuration}
+        options={DURATIONS.map(d => ({ value: d, label: d + 'm' }))}
+        on:change={(e) => $timerDuration = e.detail}
+      />
     </div>
   {/if}
 
@@ -160,28 +161,6 @@
     border-left: 1px solid var(--border);
     padding-left: 0.75rem;
   }
-
-  .duration-select {
-    background: var(--bg-card);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 20px 4px 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-    appearance: none;
-    /* Custom caret arrow */
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width%3D'292' height%3D'292'%3E%3Cpath fill%3D'%239CA3AF' d%3D'M287 69a18 18 0 0 0-13-5H18a18 18 0 0 0-13 18c0 5 2 9 5 13l128 128c4 4 8 5 13 5s9-1 13-5l128-128c4-3 5-8 5-13a18 18 0 0 0-5-13z'%2F%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat;
-    background-position: right 6px center;
-    background-size: 8px auto;
-    transition: border-color 0.2s;
-  }
-
-  .duration-select:hover,
-  .duration-select:focus { border-color: var(--accent-blue); }
 
   /* ── Controls ── */
   .controls { display: flex; gap: 0.25rem; }
