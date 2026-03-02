@@ -23,7 +23,12 @@
 
   async function startBreak(minutes: number, phase: number) {
     dismissed = true;
-    await invoke('start_break', { durationMinutes: minutes, phase });
+    await invoke('start_break', {
+      durationMinutes: minutes,
+      phase,
+      notifBreakTitle:    $strings.notifBreakTitle,
+      notifBreakRecommend: $strings.notifBreakTime,
+    });
   }
 </script>
 

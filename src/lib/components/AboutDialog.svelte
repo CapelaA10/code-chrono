@@ -4,17 +4,18 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { X, Github, Heart, Clock, GitBranch, Zap } from 'lucide-svelte';
+  import { strings } from '$lib/i18n/store';
 
   const dispatch = createEventDispatcher<{ close: void }>();
   function close() { dispatch('close'); }
 </script>
 
-<button class="backdrop" on:click={close} aria-label="Close"></button>
+<button class="backdrop" on:click={close} aria-label={$strings.closeWindow}></button>
 
-<div class="dialog" role="dialog" aria-modal="true" aria-label="About Code Chrono">
+<div class="dialog" role="dialog" aria-modal="true" aria-label={$strings.about}>
 
   <!-- Close -->
-  <button class="close-btn" on:click={close} title="Close"><X size={18} /></button>
+  <button class="close-btn" on:click={close} title={$strings.closeWindow}><X size={18} /></button>
 
   <!-- Header — logo mark + name -->
   <div class="hero">
@@ -23,7 +24,7 @@
     </div>
     <div>
       <h1 class="app-name">Code Chrono</h1>
-      <span class="version-pill">v0.2.0</span>
+      <span class="version-pill">v0.3.0</span>
     </div>
   </div>
 
@@ -33,36 +34,24 @@
     <div class="story-block">
       <div class="story-icon"><Clock size={16} /></div>
       <div class="story-text">
-        <strong>It started with a simple frustration.</strong>
-        <p>
-          I'm Pedro — a developer who, every morning, stares at the screen trying to remember
-          what I actually <em>did</em> the day before. Not just tasks, but time. Where did my day go?
-          What was I focusing on? Was I even productive?
-        </p>
+        <strong>{$strings.aboutBlock1Title}</strong>
+        <p>{$strings.aboutBlock1Body}</p>
       </div>
     </div>
 
     <div class="story-block">
       <div class="story-icon"><Zap size={16} /></div>
       <div class="story-text">
-        <strong>So I built a tracker for myself.</strong>
-        <p>
-          Code Chrono started as a personal Pomodoro log — a way to attach sessions to real tasks
-          and finally answer the question <em>"what did I do today?"</em> at the end of every day.
-          Seeing the data made me understand my own patterns and where I could improve.
-        </p>
+        <strong>{$strings.aboutBlock2Title}</strong>
+        <p>{$strings.aboutBlock2Body}</p>
       </div>
     </div>
 
     <div class="story-block">
       <div class="story-icon"><GitBranch size={16} /></div>
       <div class="story-text">
-        <strong>Then the repos multiplied.</strong>
-        <p>
-          Like any developer I was juggling GitHub, GitLab, Jira — all at once. Switching tabs
-          to copy issue titles got old fast. So I added integrations and the ability to selectively
-          pull in issues and turn them into trackable tasks, right here.
-        </p>
+        <strong>{$strings.aboutBlock3Title}</strong>
+        <p>{$strings.aboutBlock3Body}</p>
       </div>
     </div>
 
@@ -74,24 +63,18 @@
         </svg>
       </div>
       <div class="story-text">
-        <strong>Built with a little help from AI.</strong>
-        <p>
-          This app was crafted using <strong>Tauri</strong> + <strong>SvelteKit</strong> on the
-          frontend and <strong>Rust</strong> on the backend — following best practices as much as
-          possible. AI was a huge part of the process, helping me move faster while keeping the
-          code clean and intentional.
-        </p>
+        <strong>{$strings.aboutBlock4Title}</strong>
+        <p>{$strings.aboutBlock4Body}</p>
       </div>
     </div>
 
     <div class="story-block">
       <div class="story-icon"><Heart size={16} /></div>
       <div class="story-text">
-        <strong>Open source — because the community gave me everything.</strong>
+        <strong>{$strings.aboutBlock5Title}</strong>
         <p>
-          Every library, tutorial, answered Stack Overflow question, and open-source tool I've ever
-          used was someone else's gift to me. Code Chrono is my way of giving something back.
-          If you find it useful, <a href="https://github.com/CapelaA10/code-chrono" target="_blank" rel="noopener" class="link">contribute, fork, or just leave a ⭐</a>.
+          {$strings.aboutBlock5Body}
+          <a href="https://github.com/CapelaA10/code-chrono" target="_blank" rel="noopener" class="link">{$strings.aboutContribute}</a>.
         </p>
       </div>
     </div>
@@ -106,9 +89,9 @@
       class="gh-btn"
     >
       <Github size={16} />
-      <span>View on GitHub</span>
+      <span>{$strings.viewOnGithub}</span>
     </a>
-    <span class="made-by">Made with <Heart size={12} class="heart-icon" /> by Pedro Capela</span>
+    <span class="made-by">{$strings.madeBy}<Heart size={12} class="heart-icon" /></span>
   </div>
 </div>
 
@@ -219,9 +202,6 @@
     color: var(--text-muted);
   }
 
-  .story-text em {
-    font-style: italic; color: var(--text);
-  }
 
   .link {
     color: var(--accent-blue);

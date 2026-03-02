@@ -11,6 +11,7 @@
   import { timerDuration } from '$lib/stores/timerSettings';
   import { activeTimer } from '$lib/stores/timer';
   import { formatTime } from '$lib/utils/format';
+  import { strings } from '$lib/i18n/store';
   import Dropdown from '$lib/components/Dropdown.svelte';
 
   // ── Derived State ──────────────────────────────────────────────────────────
@@ -38,7 +39,15 @@
 
   async function toggle() {
     if (isIdle) {
-      await invoke('start_pomodoro', { taskName: 'General', durationMinutes: $timerDuration });
+      await invoke('start_pomodoro', {
+        taskName: 'General',
+        durationMinutes: $timerDuration,
+        notifStarted:       $strings.notifTimerStart,
+        notifComplete:      $strings.notifTimerEnd,
+        notifBreakOver:     $strings.notifBreakOver,
+        notifBreakTitle:    $strings.notifBreakTitle,
+        notifBreakRecommend: $strings.notifBreakTime,
+      });
     } else {
       await invoke('pause_timer');
     }

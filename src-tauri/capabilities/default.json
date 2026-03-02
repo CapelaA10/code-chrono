@@ -29,6 +29,8 @@
     "opener:default",
     "updater:default",
     "updater:allow-check",
-    "updater:allow-download-and-install"
+    "updater:allow-download-and-install",
+    "core:window:allow-set-background-color",
+    "core:window:allow-set-title-bar-style"
   ]
 }

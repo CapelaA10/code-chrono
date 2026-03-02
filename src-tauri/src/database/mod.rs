@@ -14,6 +14,7 @@
 // with the `Database` struct; sub-module internals stay private.
 
 mod models;
+mod programs;
 mod projects;
 mod sessions;
 mod settings;
@@ -23,6 +24,10 @@ mod tasks;
 // Re-export models so the rest of the crate can use them without
 // reaching into sub-modules.
 pub use models::{DailyStats, PomodoroRecord, Project, Tag, Task, TaskStats};
+
+// Re-export TrackedProgram so commands/programs.rs can define it once
+// and the DB layer can use it without a circular dep.
+pub use crate::commands::programs::TrackedProgram;
 
 use rusqlite::{Connection, Result};
 
@@ -154,6 +159,24 @@ impl Database {
     pub fn set_setting(&self, key: &str, value: &str) -> Result<()> {
         settings::set(&self.conn, key, value)
     }
+
+    // ── Tracked programs ──────────────────────────────────────────────────
+
+    pub fn get_tracked_programs(&self) -> Result<Vec<TrackedProgram>> {
+        programs::list(&self.conn)
+    }
+
+    pub fn save_tracked_program(&self, program: TrackedProgram) -> Result<()> {
+        programs::upsert(&self.conn, &program)
+    }
+
+    pub fn remove_tracked_program(&self, id: i64) -> Result<()> {
+        programs::delete(&self.conn, id)
+    }
+
+    pub fn toggle_tracked_program(&self, id: i64, enabled: bool) -> Result<()> {
+        programs::set_enabled(&self.conn, id, enabled)
+    }
 }
 
 // ── Schema ────────────────────────────────────────────────────────────────
@@ -221,6 +244,17 @@ mod schema {
             "ALTER TABLE pomodoro_sessions ADD COLUMN end_timestamp INTEGER",
             [],
         );
+
+        // v0.3.0 — tracked programs for IDE detection
+        conn.execute_batch("
+            CREATE TABLE IF NOT EXISTS tracked_programs (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                name         TEXT    NOT NULL,
+                executable   TEXT    NOT NULL UNIQUE,
+                enabled      INTEGER NOT NULL DEFAULT 1,
+                is_custom    INTEGER NOT NULL DEFAULT 0
+            );
+        ")?;
 
         Ok(())
     }

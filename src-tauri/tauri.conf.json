@@ -1,6 +1,6 @@
 {
   "productName": "Code Chrono",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.codechrono.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -9,6 +9,7 @@
     "frontendDist": "../build"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Code Chrono",
@@ -18,7 +19,9 @@
         "minHeight": 600,
         "label": "main",
         "decorations": true,
-        "resizable": true
+        "resizable": true,
+        "transparent": false,
+        "titleBarStyle": "Transparent"
       }
     ],
     "security": {

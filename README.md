@@ -1,6 +1,6 @@
 # Code Chrono 🕐
 
-> Privacy-first desktop task & time tracker built for developers. Pomodoro timer, GitHub/GitLab/Jira sync, local-first SQLite storage. **No accounts. No cloud. Yours.**
+> A privacy-first desktop task and time tracker built for developers. Pomodoro timer, GitHub/GitLab/Jira sync, local SQLite storage. **No accounts. No cloud. Yours.**
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -11,17 +11,17 @@
 
 ## 🙋 The Story
 
-Code Chrono was created by **Pedro Capela** — a developer who woke up one too many mornings unable to answer the question: *"what exactly did I work on yesterday?"*
+Code Chrono was created by **Pedro Capela**, a developer who woke up one too many mornings unable to answer the question: *"what exactly did I work on yesterday?"*
 
-Not just the tasks, but the **time**. The focus. The drift. The rabbit holes. As a developer spread across multiple repos and tools, the cognitive overhead of tracking any of it felt insane — so he stopped trying, and that made things worse.
+Not just the tasks, but the time. The focus. The drift. The rabbit holes. As a developer juggling multiple repos and tools, the overhead of tracking any of it felt impossible, so he stopped trying. That made things worse.
 
 The idea was simple: attach Pomodoro sessions to real tasks so at the end of the day there's actual *data* to look back at. Seeing patterns made it possible to improve them.
 
-Then the repos multiplied. GitHub issues here, GitLab tickets there, Jira boards somewhere else. Copy-pasting issue titles got old fast — so integrations landed. The import drawer was born so you can selectively pull in only what matters, not sync everything blindly.
+Then the repos multiplied. GitHub issues here, GitLab tickets there, Jira boards somewhere else. Copy-pasting issue titles got old fast, so integrations landed. The import drawer was born so you can selectively pull in only what matters.
 
-The whole thing was built with **Tauri + SvelteKit + Rust**, with AI as a pair-programmer to keep momentum high and the code clean. It follows best practices as closely as possible and ships as a native desktop app — **fully offline, no cloud, no account required**.
+The whole thing was built with **Tauri + SvelteKit + Rust**, with AI as a pair programmer to keep momentum high and the code clean. It ships as a native desktop app, fully offline, no cloud, no account required.
 
-The community gave Pedro everything — every library, tutorial, and answered Stack Overflow post. Code Chrono is his way of giving something back. If it helps you, contributing, forking, or even leaving a ⭐ is a meaningful thing to do.
+The community gave Pedro everything: every library, tutorial, and answered Stack Overflow post. Code Chrono is his way of giving something back. If it helps you, contributing, forking, or even leaving a ⭐ is a meaningful thing to do.
 
 ---
 
@@ -37,31 +37,34 @@ The community gave Pedro everything — every library, tutorial, and answered St
 | 🔍 **Task Filters** | Filter your task list by project, tag, and status with dismissible chips |
 | 📊 **Statistics** | Time-by-task, daily breakdown, 12-week heatmap, bar charts, CSV export |
 | 🌍 **Localization** | Interface available in English, Portuguese (PT/BR), Spanish, and Greek |
-| 🔄 **Auto Updates** | Completely silent, secure background updates powered by Minisign and Tauri |
+| 🔄 **Auto Updates** | Silent, secure background updates powered by Minisign and Tauri |
 | ⌨️ **Global Hotkey** | `Ctrl+Shift+P` (or `⌘⇧P` on Mac) to pause/resume from anywhere |
-| 🌙 **Dark Mode** | Light and dark themes natively integrated, persisted per device |
-| 🔒 **Privacy First** | All data (including task templates) stored locally in SQLite — nothing sent to any server |
+| 🌙 **Dark Mode** | Light and dark themes, persisted per device |
+| 🔒 **Privacy First** | All data stored locally in SQLite. Nothing sent to any server. |
+| 🪟 **Thematic Windows** | Native title bar colors automatically sync with light/dark themes. |
+| 🔔 **Smart Notifications** | Configurable notifications for session start, session end, and 4-Pomodoro break reminders |
+| 🖥️ **IDE Detection** | Detects VS Code, JetBrains, Xcode, Zed, and 25+ more IDEs, then prompts you to pick a task |
 
 ---
 
 ## 📥 Installation
 
 ### 🍎 macOS (Apple Silicon & Intel)
-The simplest way to install `Code Chrono` and safely bypass Apple's "Damaged App" Gatekeeper warning is by running this single command in your Terminal:
+The easiest way to install Code Chrono and bypass the Gatekeeper warning is to run this in your Terminal:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/CapelaA10/code-chrono/main/install.sh | bash
 ```
-> *This automatically downloads the latest release, extracts it, removes the quarantine attribute, and moves it to your `/Applications` folder.*
+> *Downloads the latest release, removes the quarantine attribute, and moves it to `/Applications` automatically.*
 
 ### 🪟 Windows
-1. Head over to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
-2. Download the `Code.Chrono_x.x.x_x64-setup.exe` file.
-3. Double-click to install. *(If SmartScreen blocks it, click "More info" > "Run anyway")*.
+1. Go to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
+2. Download `Code.Chrono_x.x.x_x64-setup.exe`.
+3. Double-click to install. If SmartScreen blocks it, click "More info" then "Run anyway".
 
 ### 🐧 Linux
-1. Head over to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
-2. Download either the `.deb` or `.AppImage` file depending on your distribution.
+1. Go to the [Releases](https://github.com/CapelaA10/code-chrono/releases/latest) page.
+2. Download either the `.deb` or `.AppImage` depending on your distribution.
 
 ---
 
@@ -69,21 +72,16 @@ curl -sL https://raw.githubusercontent.com/CapelaA10/code-chrono/main/install.sh
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org) ≥ 18
-- [Rust](https://rustup.rs) (stable toolchain)
-- Platform prerequisites for Tauri: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
+- [Node.js](https://nodejs.org) 18 or newer
+- [Rust](https://rustup.rs) stable toolchain
+- Tauri system dependencies: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
 
 ### Development
 
 ```bash
-# Clone the repo
 git clone https://github.com/CapelaA10/code-chrono
 cd code-chrono
-
-# Install frontend dependencies
 npm install
-
-# Run in development mode (auto-reloads on changes)
 npm run tauri dev
 ```
 
@@ -100,25 +98,25 @@ Binaries are output to `src-tauri/target/release/bundle/`.
 ## 🔗 Integration Setup
 
 ### GitHub
-1. Go to **Settings → Integrations → GitHub**
-2. Create a [Personal Access Token](https://github.com/settings/tokens) with `repo` (or `public_repo`) scope
-3. Optionally specify a repository (`owner/repo`) — leave blank to fetch all issues assigned to you
+1. Go to **Settings > Integrations > GitHub**
+2. Create a [Personal Access Token](https://github.com/settings/tokens) with `repo` or `public_repo` scope
+3. Optionally enter a repository in `owner/repo` format (leave blank to fetch all issues assigned to you)
 4. Click **Save**, then click **GitHub** in the sidebar to open the import drawer
 5. Filter, select issues, and optionally import GitHub labels as local tags
 
 ### GitLab
-1. Go to **Settings → Integrations → GitLab**
+1. Go to **Settings > Integrations > GitLab**
 2. Create a [Personal Access Token](https://gitlab.com/-/profile/personal_access_tokens) with `read_api` scope
 3. Set the host (default: `https://gitlab.com`) and your token
-4. Click **Save**, then click **GitLab** in the sidebar to open the import drawer
-5. Filter issues by project or label, select what you want, and optionally import labels as tags
+4. Click **Save**, then click **GitLab** in the sidebar
+5. Filter by project or label, select what you want, and optionally import labels as tags
 
 ### Jira
-1. Go to **Settings → Integrations → Jira**
+1. Go to **Settings > Integrations > Jira**
 2. Enter your Atlassian domain (e.g. `company.atlassian.net`)
-3. Create an [API Token](https://id.atlassian.com/manage-profile/security/api-tokens) and enter your email + token
-4. Click **Save**, then click **Jira** in the sidebar to open the import drawer
-5. Select the issues you want; Jira labels can be imported as local tags
+3. Create an [API Token](https://id.atlassian.com/manage-profile/security/api-tokens) and enter your email and token
+4. Click **Save**, then click **Jira** in the sidebar
+5. Select issues and optionally import Jira labels as local tags
 
 ---
 
@@ -140,45 +138,22 @@ Binaries are output to `src-tauri/target/release/bundle/`.
 code-chrono/
 ├── src/                          # Svelte frontend
 │   ├── lib/
-│   │   │   ├── components/
-│   │   │   ├── calendar/
-│   │   │   │   ├── CalendarCell.svelte
-│   │   │   │   ├── CalendarGrid.svelte
-│   │   │   │   └── CalendarHeader.svelte
-│   │   │   ├── integrations/
-│   │   │   │   ├── syncTypes.ts                # Shared ExternalTask interface
-│   │   │   │   ├── SyncPreviewModal.svelte     # Orchestrator: state + async logic
-│   │   │   │   ├── SyncDrawerHeader.svelte     # Source badge, title, count badges, close
-│   │   │   │   ├── SyncFilterBar.svelte        # Search, project/label selects, hide-imported
-│   │   │   │   ├── SyncIssueList.svelte        # Select-all bar + scrollable issue rows
-│   │   │   │   └── SyncDrawerFooter.svelte     # Import options checkboxes + action buttons
+│   │   ├── components/
+│   │   │   ├── calendar/         # CalendarCell, CalendarGrid, CalendarHeader
+│   │   │   ├── integrations/     # SyncPreviewModal + sub-components, syncTypes.ts
 │   │   │   ├── settings/
-│   │   │   │   ├── SettingsAppearance.svelte   # Compact inline light/dark pill toggle
-│   │   │   │   ├── SettingsProductivity.svelte # Hotkey, idle, timer, auto-import projects
-│   │   │   │   ├── SettingsIntegrations.svelte # GitHub / GitLab / Jira credential forms
+│   │   │   │   ├── SettingsAppearance.svelte
+│   │   │   │   ├── SettingsProductivity.svelte
+│   │   │   │   ├── SettingsNotifications.svelte   # v0.3.0
+│   │   │   │   ├── SettingsPrograms.svelte        # v0.3.0
+│   │   │   │   ├── SettingsIntegrations.svelte
 │   │   │   │   ├── SettingsDataManagement.svelte
 │   │   │   │   └── SettingsDangerZone.svelte
-│   │   │   ├── sidebar/
-│   │   │   │   ├── SidebarIntegrations.svelte  # Platform buttons → opens SyncPreviewModal
-│   │   │   │   ├── SidebarNav.svelte
-│   │   │   │   ├── SidebarLogo.svelte
-│   │   │   │   └── InlineCreateForm.svelte
-│   │   │   ├── stats/
-│   │   │   │   ├── StatsSummary.svelte
-│   │   │   │   ├── StatsTimeByTask.svelte
-│   │   │   │   ├── StatsDailyBreakdown.svelte
-│   │   │   │   ├── StatsHeatmap.svelte         # Weekly activity heatmap
-│   │   │   │   └── StatsBarChart.svelte        # Inline total visualization
-│   │   │   ├── task/
-│   │   │   │   ├── TaskFilterBar.svelte        # Project / tag / status filter bar
-│   │   │   │   ├── TaskEditModal.svelte
-│   │   │   │   ├── TaskCheckbox.svelte
-│   │   │   │   ├── TaskMeta.svelte
-│   │   │   │   ├── TemplatePickerModal.svelte
-│   │   │   │   └── TemplateSaveButton.svelte
-│   │   │   ├── timer/
-│   │   │   │   ├── TimerWidget.svelte
-│   │   │   │   └── BreakBanner.svelte          # Session completion banner
+│   │   │   ├── sidebar/          # SidebarLogo, SidebarNav, SidebarIntegrations
+│   │   │   ├── stats/            # StatsSummary, StatsTimeByTask, StatsDailyBreakdown, StatsHeatmap, StatsBarChart
+│   │   │   ├── task/             # TaskFilterBar, TaskEditModal, TaskCheckbox, TaskMeta, templates
+│   │   │   ├── timer/            # TimerWidget, BreakBanner
+│   │   │   ├── ProgramNotificationModal.svelte    # v0.3.0
 │   │   │   ├── Header.svelte
 │   │   │   ├── QuickAdd.svelte
 │   │   │   ├── Sidebar.svelte
@@ -186,53 +161,40 @@ code-chrono/
 │   │   │   ├── TaskList.svelte
 │   │   │   └── ThemeToggle.svelte
 │   │   ├── i18n/
-│   │   │   ├── locales/
-│   │   │   │   ├── en.ts
-│   │   │   │   ├── pt.ts
-│   │   │   │   ├── es.ts
-│   │   │   │   ├── el.ts
-│   │   │   │   └── br.ts
-│   │   │   └── store.ts           # Locale store and t() helper
+│   │   │   ├── locales/ (en, pt, br, es, el)
+│   │   │   └── store.ts
 │   │   ├── stores/
-│   │   │   ├── tasks.ts           # Reactive stores + refreshAll() + filter stores
-│   │   │   ├── templates.ts       # localStorage-backed task template store
-│   │   │   ├── theme.ts
-│   │   │   ├── timer.ts
-│   │   │   ├── timerSettings.ts
-│   │   │   └── idle.ts
 │   │   ├── types/
-│   │   │   └── index.ts           # Single source of truth for all TS interfaces
 │   │   └── utils/
-│   │       └── format.ts          # formatTime, formatDuration, formatDate
 │   └── routes/
-│       ├── +layout.svelte         # App shell (sidebar + main area)
-│       ├── +page.svelte           # Main task view (includes TaskFilterBar)
+│       ├── +layout.svelte
+│       ├── +page.svelte
 │       ├── calendar/
-│       │   └── +page.svelte       # Calendar view orchestration
 │       ├── settings/
-│       │   └── +page.svelte       # Thin orchestrator; composes settings sub-components
 │       └── stats/
-│           └── +page.svelte       # Statistics page
 └── src-tauri/                     # Rust backend
     └── src/
         ├── main.rs
-        ├── lib.rs                 # Command registration & wiring
-        ├── integrations.rs        # GitHub / GitLab / Jira API clients + ExternalTask
+        ├── lib.rs
+        ├── integrations.rs
         ├── commands/
         │   ├── timer.rs
+        │   ├── notifications.rs   # v0.3.0
+        │   ├── programs.rs        # v0.3.0
         │   ├── tasks.rs
         │   ├── projects.rs
         │   ├── tags.rs
         │   ├── settings.rs
         │   ├── stats.rs
         │   ├── data.rs
-        │   └── sync.rs            # preview_sync_*, import_selected (labels + projects)
+        │   └── sync.rs
         └── database/
-            ├── mod.rs             # Database façade
+            ├── mod.rs
+            ├── programs.rs        # v0.3.0
             ├── models.rs
             ├── sessions.rs
-            ├── tasks.rs           # + is_imported()
-            ├── projects.rs        # + find_or_create() — idempotent project creation
+            ├── tasks.rs
+            ├── projects.rs
             ├── tags.rs
             └── settings.rs
 ```
@@ -243,41 +205,41 @@ code-chrono/
 
 This project uses an automated GitHub Actions CI/CD pipeline.
 
-To create a new release across all platforms (macOS, Windows, Linux) and generate installable binaries (`.dmg`, `.exe`, `.msi`, `.deb`, `.AppImage`):
+To ship a new release for macOS, Windows, and Linux:
 
-1. **Update the Version:** Manually update the `"version"` field inside `src-tauri/tauri.conf.json` (e.g., from `"0.1.0"` to `"0.2.0"`).
-2. **Commit with 'release:':** The pipeline is strictly triggered by commits containing the exact word `release:` in the message.
-3. **Push to Main:** Push the commit to the `main` or `master` branch.
+1. Update the `"version"` field in `src-tauri/tauri.conf.json`.
+2. Commit with the word `release:` in the message.
+3. Push to `main`.
 
 ```bash
 git add src-tauri/tauri.conf.json
-git commit -m "release: 0.2.0 prod"
+git commit -m "release: 0.3.0"
 git push origin main
 ```
 
-4. Go to your repository's [Actions tab](https://github.com/CapelaA10/code-chrono/actions) to watch the CI runners compile the binaries for each OS natively.
-5. In ~15 minutes, a new **Draft Release** with all your application installers attached will be automatically published on your GitHub repository!
+4. Watch the build on your [Actions tab](https://github.com/CapelaA10/code-chrono/actions).
+5. In about 15 minutes a draft release with all installers will be published automatically.
 
-*Note: Official releases are now signed with Minisign for secure automated updates. However, since the binaries themselves are not yet signed with an EV certificate, Windows users may still see a SmartScreen warning ("More info" > "Run anyway") and macOS users are encouraged to use the `install.sh` script to sidestep Gatekeeper.*
+*Releases are signed with Minisign for secure updates. Binaries are not yet signed with an EV certificate, so Windows may show a SmartScreen prompt and macOS users should use the `install.sh` script to bypass Gatekeeper.*
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how:
+Contributions are welcome!
 
 1. **Fork** the repository
 2. **Create a branch**: `git checkout -b feature/my-feature`
-3. **Make your changes** and test them with `npm run tauri dev`
+3. **Make your changes** and test with `npm run tauri dev`
 4. **Commit**: `git commit -m 'feat: add my feature'`
 5. **Push**: `git push origin feature/my-feature`
 6. **Open a Pull Request**
 
-### Areas Welcome for Contribution
+Ideas worth contributing:
 - Advanced reporting and data visualizations
-- Additional third-party integrations (e.g., Trello, Asana, Linear)
-- Custom sound packs for timer notifications
-- Interactive desktop widgets
+- Additional integrations (Trello, Asana, Linear)
+- Custom notification sounds
+- Desktop widgets
 
 ---
 
@@ -286,5 +248,3 @@ Contributions are welcome! Here's how:
 MIT © [Pedro Capela](https://github.com/CapelaA10)
 
 See [LICENSE](./LICENSE) for details.
-
----

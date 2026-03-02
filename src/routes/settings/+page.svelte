@@ -1,10 +1,12 @@
 <script lang="ts">
   import { ArrowLeft, Check, Info } from 'lucide-svelte';
-  import SettingsAppearance    from '$lib/components/settings/SettingsAppearance.svelte';
-  import SettingsProductivity  from '$lib/components/settings/SettingsProductivity.svelte';
-  import SettingsIntegrations  from '$lib/components/settings/SettingsIntegrations.svelte';
-  import SettingsDataManagement from '$lib/components/settings/SettingsDataManagement.svelte';
-  import SettingsDangerZone    from '$lib/components/settings/SettingsDangerZone.svelte';
+  import SettingsAppearance      from '$lib/components/settings/SettingsAppearance.svelte';
+  import SettingsProductivity    from '$lib/components/settings/SettingsProductivity.svelte';
+  import SettingsNotifications   from '$lib/components/settings/SettingsNotifications.svelte';
+  import SettingsPrograms        from '$lib/components/settings/SettingsPrograms.svelte';
+  import SettingsIntegrations    from '$lib/components/settings/SettingsIntegrations.svelte';
+  import SettingsDataManagement  from '$lib/components/settings/SettingsDataManagement.svelte';
+  import SettingsDangerZone      from '$lib/components/settings/SettingsDangerZone.svelte';
   import { strings } from '$lib/i18n/store';
 
   // ── Toast state ──────────────────────────────────────────────────────────
@@ -38,6 +40,8 @@
     <div class="settings-grid">
       <SettingsAppearance />
       <SettingsProductivity />
+      <SettingsNotifications />
+      <SettingsPrograms />
       <SettingsIntegrations on:message={handleMessage} />
       <SettingsDataManagement on:message={handleMessage} />
       <SettingsDangerZone on:message={handleMessage} />

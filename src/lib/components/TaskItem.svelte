@@ -11,6 +11,7 @@
   import { refreshTasks, projects, tags } from '$lib/stores/tasks';
   import { timerDuration } from '$lib/stores/timerSettings';
   import { activeTimer } from '$lib/stores/timer';
+  import { strings } from '$lib/i18n/store';
   import TaskCheckbox  from './task/TaskCheckbox.svelte';
   import TaskMeta      from './task/TaskMeta.svelte';
   import TaskEditModal from './task/TaskEditModal.svelte';
@@ -42,7 +43,12 @@
       }
       await invoke('start_pomodoro', {
         taskName: task.title,
-        durationMinutes: $timerDuration
+        durationMinutes: $timerDuration,
+        notifStarted:       $strings.notifTimerStart,
+        notifComplete:      $strings.notifTimerEnd,
+        notifBreakOver:     $strings.notifBreakOver,
+        notifBreakTitle:    $strings.notifBreakTitle,
+        notifBreakRecommend: $strings.notifBreakTime,
       });
     }
   }

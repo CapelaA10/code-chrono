@@ -5,7 +5,8 @@
   import AboutDialog from './AboutDialog.svelte';
   import { strings } from '$lib/i18n/store';
   import { page } from '$app/stores';
-  import { Settings, Info } from 'lucide-svelte';
+  import { Settings, Info, Bug } from 'lucide-svelte';
+  import { dev } from '$app/environment';
 
   let showAbout = false;
 </script>
@@ -14,6 +15,13 @@
   <SidebarLogo />
   <div class="sidebar-scroll">
     <SidebarNav />
+
+    {#if dev}
+      <a href="/debug" class="nav-item" class:active={$page.url.pathname === '/debug'} style="margin: 0.5rem 0.75rem;">
+        <Bug size={18} />
+        <span>{$strings.debug}</span>
+      </a>
+    {/if}
 
     <SidebarIntegrations />
   </div>
@@ -84,6 +92,29 @@
   .footer-item:hover {
     background: var(--btn-secondary-hover-bg);
     color: var(--text);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+
+  .nav-item:hover {
+    background: var(--btn-secondary-hover-bg);
+    color: var(--text);
+  }
+
+  .nav-item.active {
+    background: var(--accent-blue-hover);
+    color: var(--accent-blue);
+    font-weight: 600;
   }
 
   /* Reset button to look like the link items */

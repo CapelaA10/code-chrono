@@ -1,5 +1,4 @@
 export const en = {
-    // ── Sidebar ────────────────────────────────────────────────────────────────
     allTasks: 'All Tasks',
     calendar: 'Calendar',
     projects: 'Projects',
@@ -7,8 +6,6 @@ export const en = {
     settings: 'Settings',
     about: 'About',
     dashboard: 'Dashboard',
-
-    // ── Timer ──────────────────────────────────────────────────────────────────
     work: 'Work',
     shortBreak: 'Short Break',
     longBreak: 'Long Break',
@@ -18,8 +15,6 @@ export const en = {
     startShortBreak: 'Start Short Break',
     startLongBreak: 'Start Long Break',
     skipBreak: 'Skip',
-
-    // ── Tasks ──────────────────────────────────────────────────────────────────
     addTask: 'Add task… (Enter) or /search (Alt+N)',
     searchTasks: 'Search tasks…',
     searchHint: 'Press Enter to search, Esc to cancel',
@@ -45,12 +40,8 @@ export const en = {
     templates: 'Templates',
     noTemplates: 'No templates yet. Save a task as a template to get started.',
     templateNameHint: 'Template name…',
-
-    // ── Calendar ───────────────────────────────────────────────────────────────
     calendarTitle: 'Calendar',
     noTasksToday: 'No tasks due',
-
-    // ── Stats ──────────────────────────────────────────────────────────────────
     statistics: 'Statistics',
     totalSessions: 'Total Sessions',
     totalTime: 'Total Time',
@@ -68,8 +59,6 @@ export const en = {
     details: 'Details',
     back: 'Back',
     loading: 'Loading records…',
-
-    // ── Settings ───────────────────────────────────────────────────────────────
     preferences: 'Preferences',
     preferencesDesc: 'Customize your experience and manage integrations',
     appearance: 'Appearance',
@@ -110,12 +99,10 @@ export const en = {
     loadingIssues: 'Loading issues...',
     noIssuesFound: 'No issues found.',
     clear: 'Clear',
-
-    // ── Integrations ───────────────────────────────────────────────────────────
     personalAccessToken: 'Personal Access Token',
     needsRepoScope: 'Needs `repo` scope to read issues',
     repositoryOptional: 'Repository (optional)',
-    repoFormatHint: 'Format: `owner/repo` — leave empty for all assigned issues',
+    repoFormatHint: 'Format: `owner/repo` (leave empty to fetch all issues assigned to you)',
     gitlab: 'GitLab',
     gitlabHost: 'GitLab Host',
     jira: 'Jira',
@@ -129,6 +116,53 @@ export const en = {
     saveGithubSettings: 'Save GitHub Settings',
     saveGitlabSettings: 'Save GitLab Settings',
     saveJiraSettings: 'Save Jira Settings',
+    minimize: 'Minimize',
+    maximize: 'Maximize',
+    closeWindow: 'Close',
+    notifications: 'Notifications',
+    notificationsDesc: 'Control when Code Chrono alerts you',
+    enableNotifications: 'Enable Notifications',
+    notifyOnStart: 'Notify when session starts',
+    notifyOnEnd: 'Notify when session ends',
+    notifyBreakRecommend: 'Recommend break (after 4 Pomodoros)',
+    notifyBreakRecommendHint: 'Sends a reminder after 4 consecutive work sessions',
+    notifTimerStart: 'Session started! Stay focused. 🎯',
+    notifTimerEnd: 'Session complete! Great work. 🎉',
+    notifBreakOver: 'Break over! Time to focus. 💪',
+    notifBreakTitle: 'Code Chrono',
+    notifBreakTime: "You have done 4 sessions! Time for a longer break. ☕",
+    programs: 'Program Detection',
+    programsDesc: 'Automatically detect IDEs and prompt task tracking',
+    scanPrograms: 'Scan for IDEs',
+    trackedPrograms: 'Tracked Programs',
+    addCustomProgram: 'Add custom program…',
+    notifyOnProgramOpen: 'Notify when a tracked program opens',
+    notifyOnProgramOpenHint: 'A prompt will ask which task you want to track',
+    enableFor: 'Enable for',
+    noTrackedPrograms: 'No programs tracked yet. Click "Scan for IDEs" to get started.',
+    programOpened: '{name} opened',
+    whichTask: 'Which task would you like to track?',
+    startTracking: 'Start Tracking',
+    dismiss: 'Dismiss',
+    selectTask: 'Select a task…',
+    viewOnGithub: 'View on GitHub',
+    madeBy: 'Made with ❤ by Pedro Capela',
+    aboutBlock1Title: 'It started with a simple frustration.',
+    aboutBlock1Body: "I'm Pedro, a developer who every morning stares at the screen trying to remember what I actually did the day before. Not just tasks, but time. Where did my day go? What was I focusing on? Was I even productive?",
+    aboutBlock2Title: 'So I built a tracker for myself.',
+    aboutBlock2Body: 'Code Chrono started as a personal Pomodoro log, a way to attach sessions to real tasks and finally answer the question "what did I do today?" at the end of every day. Seeing the data helped me understand my own patterns and where to improve.',
+    aboutBlock3Title: 'Then the repos multiplied.',
+    aboutBlock3Body: 'Like any developer I was juggling GitHub, GitLab, and Jira all at once. Switching tabs to copy issue titles got old fast. So I added integrations and the ability to selectively pull in issues and turn them into trackable tasks.',
+    aboutBlock4Title: 'Built with a little help from AI.',
+    aboutBlock4Body: 'This app was built using Tauri, SvelteKit, and Rust, following best practices as closely as possible. AI was a big part of the process; it helped me move faster while keeping the code clean and intentional.',
+    aboutBlock5Title: 'Open source, because the community gave me everything.',
+    aboutBlock5Body: "Every library, tutorial, answered Stack Overflow question, and open-source tool I've ever used was someone else's gift to me. Code Chrono is my way of giving something back. If you find it useful, ",
+    aboutContribute: 'contribute, fork, or leave a ⭐',
+    debug: 'Debug',
+    testNotifications: 'Test Notifications',
+    testNotificationTitle: 'Test Notification',
+    testNotificationBody: 'This is a test notification from the debug page.',
+    sendTestNotification: 'Send Test Notification',
 };
 
 export type StringKey = keyof typeof en;
