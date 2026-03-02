@@ -7,6 +7,81 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-03-02 · Bug Fixes & IDE Improvements
+
+### Fixed
+
+#### Jira Integration — API 410 Gone
+- Migrated the Jira sync from the **removed** `GET /rest/api/3/search` endpoint to the new
+  **`POST /rest/api/3/search/jql`** endpoint with a JSON body, as required by Atlassian
+  changelog [CHANGE-2046](https://developer.atlassian.com/changelog/#CHANGE-2046).
+- Both the legacy `sync_jira` command and the `preview_sync_jira` / `import_selected` flow
+  now use the correct endpoint, resolving the _"410 Gone"_ error that made Jira syncing
+  completely non-functional.
+
+#### Notifications — macOS
+- Added `NSUserNotificationUsageDescription` to the macOS `Info.plist` bundle (via
+  `src-tauri/Info.plist`). Without this key macOS silently denies notification permission
+  on newer OS versions — which is why no system alerts appeared on Mac.
+- `request_notification_permission` now correctly inspects the `PermissionState` enum
+  returned by `tauri_plugin_notification` and returns `true` only when the state is
+  `Granted`, instead of always returning `true` unconditionally.
+
+#### Program / IDE Detection — multiple fixes
+- **Stale modal on IDE close**: the frontend `ProgramNotificationModal` now listens for a
+  new `program-closed` Tauri event and auto-dismisses if the program shown was closed while
+  the modal was still open. Previously it stayed on screen indefinitely.
+- **False-positive suppression**: rewrote the `prev_detected` tracking to store only *tracked
+  program executable keys* instead of all system process names. The old approach stored
+  every running process (hundreds), and the `exe.contains(proc_name)` check would falsely
+  match short process names like `"c"` or `"od"`, making `just_opened` always `false` and
+  silently suppressing every detection event.
+- **Digit suffix matching** (`webstorm64`, `studio64`): the `starts_with` guard used
+  `!is_ascii_alphanumeric()` which blocked digits, preventing `"webstorm64.exe"` from
+  matching the `"webstorm"` key. Changed to `!is_ascii_alphabetic()` so digit suffixes
+  (version numbers) are allowed while pure-letter continuations (`"codecov"` ≠ `"code"`)
+  are still correctly blocked.
+- **`.exe` / `.app` extension stripping**: introduced a dedicated `process_is_running()`
+  helper that trims platform suffixes before comparing, so `"cursor.exe"` reliably matches
+  `"cursor"` on Windows and `"Visual Studio Code.app"` matches on macOS.
+- **Spurious notification after cooldown**: the watcher now only emits `program-opened`
+  when a program transitions from not-running → running within a single 5-second poll
+  interval. Previously it would re-fire every time the 15-minute cooldown expired if the
+  IDE happened to still be open.
+
+#### Auto-Update — root cause documented
+- Identified the root cause of auto-update never working: `latest.json` was absent from
+  all GitHub releases because `TAURI_SIGNING_PRIVATE_KEY` was not set as a GitHub Secret.
+  `tauri-action` silently skips generating the signed update manifest when the key is
+  missing. Added inline documentation to the workflow with instructions.
+- Updated `UpdateChecker.svelte` to silently ignore 404 errors (expected in dev builds
+  and before the first signed release), avoiding noisy console errors.
+
+### Added
+
+#### Expanded AI IDE Detection
+The `KNOWN_IDES` list now includes all major AI-first code editors that ship as standalone
+desktop applications:
+
+| IDE | Executable stem |
+|---|---|
+| PearAI | `pearai` |
+| Void | `void` |
+| Trae (ByteDance) | `trae` |
+| Aide | `aide` |
+| Melty | `melty` |
+| Antigravity | `antigravity` |
+
+The list is now organised into labelled sections: AI-first IDEs, VS Code variants,
+JetBrains, Apple, text editors, terminal editors, and dev tools.
+
+### Changed
+- **Release workflow** (`release.yml`): replaced the generic `releaseBody` with a direct
+  link to `CHANGELOG.md` so users always know what changed in each release.
+- **`Info.plist`** added at `src-tauri/Info.plist` for macOS bundle metadata.
+
+---
+
 ## [0.3.0] — 2026-03-01 · Themes, Notifications & IDE Detection
 
 ### Added

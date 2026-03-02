@@ -119,16 +119,20 @@ pub async fn fetch_jira_tasks(domain: &str, email: &str, token: &str) -> Result<
         .trim_start_matches("http://")
         .trim_end_matches('/');
 
-    let url = format!("https://{}/rest/api/3/search", clean_domain);
+    // Atlassian removed GET /rest/api/3/search (410 Gone, CHANGE-2046).
+    // The replacement is POST /rest/api/3/search/jql with a JSON body.
+    let url = format!("https://{}/rest/api/3/search/jql", clean_domain);
+
+    let body = serde_json::json!({
+        "jql": "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+        "maxResults": 100,
+        "fields": ["summary", "description", "status", "priority", "labels", "project"]
+    });
 
     let res = client
-        .get(url)
+        .post(url)
         .headers(headers)
-        .query(&[
-            ("jql", "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"),
-            ("maxResults", "100"),
-            ("fields", "summary,description,status,priority,labels,project"),
-        ])
+        .json(&body)
         .send()
         .await
         .map_err(|e| e.to_string())?;

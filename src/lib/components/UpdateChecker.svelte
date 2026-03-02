@@ -7,43 +7,43 @@
   let updateVersion = '';
 
   onMount(async () => {
-    // Only run this logic if we are inside a Tauri window instance
+    // Only run inside the Tauri runtime (not in the browser dev server)
     if (!(window as any).__TAURI_INTERNALS__) return;
 
     try {
-      console.log('Checking for updates...');
       const update = await check();
 
       if (update) {
-        console.log(`Update ${update.version} available. Downloading silently...`);
         updateVersion = update.version;
         status = 'downloading';
 
         let downloaded = 0;
-        let contentLength = 0;
 
-        // Perform the download and install headlessly
         await update.downloadAndInstall((progress) => {
           switch (progress.event) {
             case 'Started':
-              contentLength = progress.data.contentLength || 0;
+              // contentLength may be 0 if the server doesn't send Content-Length
               break;
             case 'Progress':
               downloaded += progress.data.chunkLength;
               break;
             case 'Finished':
-              console.log('Update downloaded and installed successfully');
+              console.log('[updater] Download complete, update staged for next launch.');
               break;
           }
         });
 
         status = 'ready';
-      } else {
-        console.log('No update available.');
       }
-    } catch (e) {
-      console.error('Update check failed:', e);
-      status = 'idle'; // Reset on error so we don't get stuck
+      // No update available → stay idle, nothing to show
+    } catch (e: any) {
+      // Silently ignore "no manifest" (404) errors — this is expected in dev
+      // builds and before the first signed release is published.
+      const msg = String(e);
+      if (!msg.includes('404') && !msg.includes('No such file')) {
+        console.warn('[updater] Update check failed:', e);
+      }
+      status = 'idle';
     }
   });
 </script>
