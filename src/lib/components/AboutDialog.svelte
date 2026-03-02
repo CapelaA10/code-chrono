@@ -24,7 +24,7 @@
     </div>
     <div>
       <h1 class="app-name">Code Chrono</h1>
-      <span class="version-pill">v0.3.0</span>
+      <span class="version-pill">v0.4.0</span>
     </div>
   </div>
 

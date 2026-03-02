@@ -33,47 +33,54 @@ pub struct TrackedProgram {
 
 /// (lowercase executable stem → display name)
 const KNOWN_IDES: &[(&str, &str)] = &[
-    // Visual Studio Code variants
-    ("code",                    "Visual Studio Code"),
-    ("code-insiders",           "VS Code Insiders"),
-    ("cursor",                  "Cursor"),
-    ("windsurf",                "Windsurf"),
-    // JetBrains
-    ("idea",                    "IntelliJ IDEA"),
-    ("pycharm",                 "PyCharm"),
-    ("webstorm",                "WebStorm"),
-    ("goland",                  "GoLand"),
-    ("clion",                   "CLion"),
-    ("rider",                   "Rider"),
-    ("rubymine",                "RubyMine"),
-    ("datagrip",                "DataGrip"),
-    ("phpstorm",                "PhpStorm"),
-    ("appcode",                 "AppCode"),
-    ("fleet",                   "Fleet"),
-    // Apple
-    ("xcode",                   "Xcode"),
-    // Google
-    ("androidstudio",           "Android Studio"),
-    ("studio",                  "Android Studio"),
-    // Text editors
-    ("sublime_text",            "Sublime Text"),
-    ("sublimetext",             "Sublime Text"),
-    ("zed",                     "Zed"),
-    ("zeditor",                 "Zed"),
-    ("atom",                    "Atom"),
-    ("nova",                    "Nova"),
-    ("bbedit",                  "BBEdit"),
-    // Terminal editors
-    ("nvim",                    "Neovim"),
-    ("vim",                     "Vim"),
-    ("emacs",                   "Emacs"),
-    ("nano",                    "Nano"),
-    // Misc dev tools
-    ("tableplus",               "TablePlus"),
-    ("dbeaver",                 "DBeaver"),
-    ("insomnia",                "Insomnia"),
-    ("postman",                 "Postman"),
-    ("docker",                  "Docker Desktop"),
+    // ── AI-first IDEs ─────────────────────────────────────────────────────
+    ("cursor",          "Cursor"),
+    ("windsurf",        "Windsurf"),
+    ("pearai",          "PearAI"),
+    ("void",            "Void"),
+    ("trae",            "Trae"),
+    ("aide",            "Aide"),
+    ("melty",           "Melty"),
+    ("antigravity",     "Antigravity"),
+    // ── Visual Studio Code variants ────────────────────────────────────────
+    ("code",            "Visual Studio Code"),
+    ("code-insiders",   "VS Code Insiders"),
+    // ── JetBrains ─────────────────────────────────────────────────────────
+    ("idea",            "IntelliJ IDEA"),
+    ("pycharm",         "PyCharm"),
+    ("webstorm",        "WebStorm"),
+    ("goland",          "GoLand"),
+    ("clion",           "CLion"),
+    ("rider",           "Rider"),
+    ("rubymine",        "RubyMine"),
+    ("datagrip",        "DataGrip"),
+    ("phpstorm",        "PhpStorm"),
+    ("appcode",         "AppCode"),
+    ("fleet",           "Fleet"),
+    // ── Apple ─────────────────────────────────────────────────────────────
+    ("xcode",           "Xcode"),
+    // ── Google / Android ──────────────────────────────────────────────────
+    ("androidstudio",   "Android Studio"),
+    ("studio",          "Android Studio"),
+    // ── Text editors ──────────────────────────────────────────────────────
+    ("sublime_text",    "Sublime Text"),
+    ("sublimetext",     "Sublime Text"),
+    ("zed",             "Zed"),
+    ("zeditor",         "Zed"),
+    ("atom",            "Atom"),
+    ("nova",            "Nova"),
+    ("bbedit",          "BBEdit"),
+    // ── Terminal editors ──────────────────────────────────────────────────
+    ("nvim",            "Neovim"),
+    ("vim",             "Vim"),
+    ("emacs",           "Emacs"),
+    ("nano",            "Nano"),
+    // ── Misc dev tools ────────────────────────────────────────────────────
+    ("tableplus",       "TablePlus"),
+    ("dbeaver",         "DBeaver"),
+    ("insomnia",        "Insomnia"),
+    ("postman",         "Postman"),
+    ("docker",          "Docker Desktop"),
 ];
 
 // ── Commands ──────────────────────────────────────────────────────────────
@@ -141,22 +148,39 @@ pub fn toggle_tracked_program(
 
 /// Spawn the process-watcher loop. Called once from `lib.rs` setup.
 /// Every 5 s: list running processes, cross-reference tracked+enabled programs,
-/// emit "program-opened" to the frontend (debounced: once per program per 15 min session).
+/// emit "program-opened" ONLY when a program transitions from not-running → running.
+/// This prevents the modal from re-appearing if the program was already open when
+/// the 15-minute cooldown window expired without a real launch event.
 pub fn spawn_program_watcher(db: Arc<Mutex<Database>>, handle: AppHandle) {
     tauri::async_runtime::spawn(async move {
-        use std::collections::HashMap;
+        use std::collections::{HashMap, HashSet};
         use std::time::{Duration, Instant};
         use sysinfo::System;
 
         let mut sys = System::new_all();
-        // last_notified: executable → Instant of last notification
         let mut last_notified: HashMap<String, Instant> = HashMap::new();
-        let cooldown = Duration::from_secs(15 * 60); // 15 minute cooldown
+        let cooldown = Duration::from_secs(15 * 60);
+
+        // prev_detected: the *tracked program executable keys* (not all process
+        // names) that were observed running in the previous poll cycle.
+        // Using only tracked-program keys avoids false matches from unrelated
+        // system processes whose names happen to be substrings of IDE names.
+        let mut prev_detected: HashSet<String> = HashSet::new();
+
+        // Seed prev_detected from the programs that are already open at startup
+        // so we don't immediately fire for an IDE the user already had running.
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+        if let Ok(initial) = db.lock().unwrap().get_tracked_programs() {
+            for p in initial.iter().filter(|p| p.enabled) {
+                if process_is_running(&sys, &p.executable) {
+                    prev_detected.insert(p.executable.clone());
+                }
+            }
+        }
 
         loop {
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            // Check the setting before doing any work
             let notify_enabled = db
                 .lock()
                 .unwrap()
@@ -165,54 +189,107 @@ pub fn spawn_program_watcher(db: Arc<Mutex<Database>>, handle: AppHandle) {
                 .map(|v| v != "false")
                 .unwrap_or(true);
 
+            // Refresh process list every cycle regardless of the setting so
+            // prev_detected stays accurate and won't fire stale events when
+            // the user re-enables the notification setting.
+            sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
             if !notify_enabled {
+                // Re-seed so the state is fresh when notifications are re-enabled.
+                if let Ok(tracked) = db.lock().unwrap().get_tracked_programs() {
+                    prev_detected.clear();
+                    for p in tracked.iter().filter(|p| p.enabled) {
+                        if process_is_running(&sys, &p.executable) {
+                            prev_detected.insert(p.executable.clone());
+                        }
+                    }
+                }
                 continue;
             }
 
-            // Fetch enabled tracked programs
             let tracked = match db.lock().unwrap().get_tracked_programs() {
                 Ok(t) => t,
                 Err(_) => continue,
             };
             let enabled: Vec<TrackedProgram> = tracked.into_iter().filter(|p| p.enabled).collect();
-            if enabled.is_empty() {
-                continue;
-            }
 
-            // Refresh process list
-            sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+            // curr_detected holds only the tracked executables running THIS cycle.
+            let mut curr_detected: HashSet<String> = HashSet::new();
 
             for program in &enabled {
-                let exe_lower = program.executable.to_lowercase();
-                // Check if any running process name matches the tracked executable
-                let is_running = sys.processes().values().any(|proc| {
-                    let proc_name = proc.name().to_string_lossy().to_lowercase();
-                    proc_name == exe_lower
-                        || proc_name.starts_with(&exe_lower)
-                        || exe_lower.contains(&proc_name.as_str())
-                });
+                let is_running = process_is_running(&sys, &program.executable);
 
                 if !is_running {
+                    // Emit a closed event if the program just stopped running.
+                    if prev_detected.contains(&program.executable) {
+                        let _ = handle.emit(
+                            "program-closed",
+                            serde_json::json!({ "name": program.name, "executable": program.executable }),
+                        );
+                    }
+                    prev_detected.remove(&program.executable);
                     continue;
                 }
 
-                // Debounce: skip if we already notified recently
+                curr_detected.insert(program.executable.clone());
+
+                // Only notify on a not-running → running transition.
+                let just_opened = !prev_detected.contains(&program.executable);
+                if !just_opened {
+                    continue;
+                }
+
+                // Respect the 15-minute cooldown for genuine re-launches.
                 if let Some(last) = last_notified.get(&program.executable) {
                     if last.elapsed() < cooldown {
                         continue;
                     }
                 }
 
-                // Emit event to frontend
                 let _ = handle.emit(
                     "program-opened",
                     serde_json::json!({ "name": program.name, "executable": program.executable }),
                 );
                 last_notified.insert(program.executable.clone(), Instant::now());
             }
+
+            // Advance the tracked-only snapshot (not all system processes).
+            prev_detected = curr_detected;
         }
     });
 }
+
+/// Returns true if any running process name matches the tracked executable.
+/// Strips `.exe` / `.app` extensions before comparing so "code" matches "Code.exe".
+fn process_is_running(sys: &sysinfo::System, executable: &str) -> bool {
+    let exe_lower = executable.to_lowercase();
+    // Strip common suffixes so platform-specific names compare cleanly.
+    let exe_stem = exe_lower
+        .trim_end_matches(".exe")
+        .trim_end_matches(".app");
+
+    sys.processes().values().any(|proc| {
+        let raw = proc.name().to_string_lossy().to_lowercase();
+        let name = raw
+            .trim_end_matches(".exe")
+            .trim_end_matches(".app");
+
+        // Exact match after stripping extension.
+        name == exe_stem
+            // Process name starts with the tracked stem (e.g. "webstorm64" matches "webstorm",
+            // "code-insiders" matches "code"). Only block if the next char is a plain letter
+            // so "codecov" does NOT match "code", but "webstorm64" and "studio64" still do.
+            || (name.starts_with(exe_stem)
+                && name[exe_stem.len()..]
+                    .chars()
+                    .next()
+                    .map(|c| !c.is_ascii_alphabetic())
+                    .unwrap_or(true))
+            // Executable contains the process name (e.g. "visual studio code" contains "code").
+            || exe_stem.contains(name)
+    })
+}
+
 
 // ── Platform-specific scanning ────────────────────────────────────────────
 

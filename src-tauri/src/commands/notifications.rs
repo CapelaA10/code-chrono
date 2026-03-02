@@ -13,17 +13,18 @@ use crate::database::Database;
 // ── Commands ──────────────────────────────────────────────────────────────
 
 /// Request OS notification permission (required on macOS at runtime).
-/// Returns true if permission is granted (or already was).
+/// Returns true if permission is Granted, false if Denied or not yet determined.
 /// On Linux / Windows this is a no-op that always returns true.
 #[tauri::command]
 pub async fn request_notification_permission(handle: AppHandle) -> Result<bool, String> {
-    // On desktop (macOS/Win/Linux) the desktop implementation always returns Granted.
-    // We call request_permission anyway to handle future mobile targets gracefully.
-    let _ = handle
+    use tauri_plugin_notification::PermissionState;
+
+    let result = handle
         .notification()
         .request_permission()
         .map_err(|e| e.to_string())?;
-    Ok(true)
+
+    Ok(result == PermissionState::Granted)
 }
 
 /// Fire a system notification if the master toggle (`notifications_enabled`)

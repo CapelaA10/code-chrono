@@ -37,10 +37,13 @@ pub fn run() {
             app.manage(Arc::clone(&db_arc));
             app.manage(Arc::new(Mutex::new(TimerState::default())));
 
-            // Request notification permission on macOS (no-op on Win/Linux)
+            // macOS requires a runtime permission request before any notification can be shown.
+            // We fire-and-forget at startup; the user will see the system dialog on first launch.
+            // On Windows/Linux this is a no-op.
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 use tauri_plugin_notification::NotificationExt;
+                // Ignore the result — if denied, the notification commands will silently skip.
                 let _ = handle.notification().request_permission();
             });
 

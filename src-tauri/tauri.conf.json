@@ -1,6 +1,6 @@
 {
   "productName": "Code Chrono",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "identifier": "com.codechrono.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -36,7 +36,10 @@
     "icon": [
       "icons/icon.ico",
       "icons/icon.png"
-    ]
+    ],
+    "macOS": {
+      "infoPlist": "./Info.plist"
+    }
   },
   "plugins": {
     "updater": {

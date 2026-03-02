@@ -1,5 +1,14 @@
 name: Release Code Chrono
 
+# Required GitHub Secrets (Settings → Secrets → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY          — Minisign private key (base64-encoded)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — passphrase for the key (can be empty)
+#
+# Without the signing key, `latest.json` is never generated and auto-update
+# will always return 404.
+#
+# Trigger: push to main/master with "release:" in the commit message.
+# e.g. git commit -m "release: 0.4.0"
 on:
   push:
     branches:
@@ -8,12 +17,11 @@ on:
 
 jobs:
   release:
-    # This job will ONLY run if the commit message contains "release:"
-    # e.g., "release: 0.1.0 prod"
+    # Only run when the commit message starts with "release:"
     if: "contains(github.event.head_commit.message, 'release:')"
     permissions:
       contents: write
-      
+
     strategy:
       fail-fast: false
       matrix:
@@ -48,17 +56,19 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
 
-      # The tauri-action automatically builds your app and creates a GitHub Release
-      # It natively reads the version from your tauri.conf.json (e.g., "0.1.0")
+      # tauri-action builds, signs the update bundles (producing .sig files and
+      # latest.json), and uploads all assets to the GitHub Release.
+      # TAURI_SIGNING_PRIVATE_KEY *must* be set in GitHub Secrets or the updater
+      # manifest (latest.json) will be silently omitted from the release.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__ # The action auto-replaces __VERSION__ with your app's version
+          tagName: v__VERSION__
           releaseName: 'v__VERSION__'
-          releaseBody: 'Automated cross-platform build triggered via GitHub Actions.'
+          releaseBody: 'See [CHANGELOG.md](https://github.com/CapelaA10/code-chrono/blob/main/CHANGELOG.md) for what changed in this release.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

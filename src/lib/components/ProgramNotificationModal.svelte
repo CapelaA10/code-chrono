@@ -6,26 +6,39 @@
   import { timerDuration } from '$lib/stores/timerSettings';
   import { X } from 'lucide-svelte';
 
-  // { name, executable } payload from the "program-opened" Tauri event
+  // { name, executable } payload from Tauri events
   interface ProgramEvent { name: string; executable: string }
 
   let visible = false;
   let programName = '';
+  let currentExecutable = '';   // track which program the modal is showing
   let taskNames: string[] = [];
   let selectedTask = '';
 
-  let unlisten: (() => void) | null = null;
+  let unlistenOpened: (() => void) | null = null;
+  let unlistenClosed:  (() => void) | null = null;
 
   onMount(async () => {
-    unlisten = await listen<ProgramEvent>('program-opened', async (event) => {
-      programName = event.payload.name;
-      taskNames = await invoke<string[]>('get_unique_task_names', { limit: 20 });
-      selectedTask = taskNames[0] ?? '';
-      visible = true;
+    unlistenOpened = await listen<ProgramEvent>('program-opened', async (event) => {
+      programName       = event.payload.name;
+      currentExecutable = event.payload.executable;
+      taskNames         = await invoke<string[]>('get_unique_task_names', { limit: 20 });
+      selectedTask      = taskNames[0] ?? '';
+      visible           = true;
+    });
+
+    // Auto-dismiss if the program is closed while the modal is still open.
+    unlistenClosed = await listen<ProgramEvent>('program-closed', (event) => {
+      if (visible && event.payload.executable === currentExecutable) {
+        visible = false;
+      }
     });
   });
 
-  onDestroy(() => unlisten?.());
+  onDestroy(() => {
+    unlistenOpened?.();
+    unlistenClosed?.();
+  });
 
   async function startTracking() {
     if (!selectedTask) return;

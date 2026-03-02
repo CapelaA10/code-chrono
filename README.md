@@ -43,7 +43,7 @@ The community gave Pedro everything: every library, tutorial, and answered Stack
 | 🔒 **Privacy First** | All data stored locally in SQLite. Nothing sent to any server. |
 | 🪟 **Thematic Windows** | Native title bar colors automatically sync with light/dark themes. |
 | 🔔 **Smart Notifications** | Configurable notifications for session start, session end, and 4-Pomodoro break reminders |
-| 🖥️ **IDE Detection** | Detects VS Code, JetBrains, Xcode, Zed, and 25+ more IDEs, then prompts you to pick a task |
+| 🖥️ **IDE Detection** | Auto-detects 40+ IDEs including VS Code, Cursor, Windsurf, PearAI, Void, Trae, all JetBrains IDEs, Xcode, and more — prompts you to start tracking when you open one |
 
 ---
 
@@ -220,7 +220,7 @@ git push origin main
 4. Watch the build on your [Actions tab](https://github.com/CapelaA10/code-chrono/actions).
 5. In about 15 minutes a draft release with all installers will be published automatically.
 
-*Releases are signed with Minisign for secure updates. Binaries are not yet signed with an EV certificate, so Windows may show a SmartScreen prompt and macOS users should use the `install.sh` script to bypass Gatekeeper.*
+*Releases are signed with Minisign for secure auto-updates. For auto-update to work you **must** set the `TAURI_SIGNING_PRIVATE_KEY` secret in your GitHub repository (Settings → Secrets → Actions) — without it, `tauri-action` silently omits `latest.json` from the release and the updater cannot find new versions. Binaries are not yet signed with an EV certificate, so Windows may show a SmartScreen prompt and macOS users should use the `install.sh` script to bypass Gatekeeper.*
 
 ---
 
