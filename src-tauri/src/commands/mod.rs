@@ -5,6 +5,8 @@
 // so Tauri's generate_handler! macro can find the correct function symbols.
 
 pub mod data;
+pub mod notifications;
+pub mod programs;
 pub mod projects;
 pub mod settings;
 pub mod stats;

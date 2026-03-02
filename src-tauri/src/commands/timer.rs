@@ -11,6 +11,7 @@ use tauri::Emitter;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::database::Database;
+use crate::commands::notifications::bool_setting;
 
 // ── TimerState ────────────────────────────────────────────────────────────
 
@@ -30,20 +31,40 @@ pub struct TimerState {
     #[serde(skip)]
     pub session_start_time: u64,
     pub last_activity:    u64,
+    /// Number of completed work sessions (phase == 0) in a row.
+    /// Resets to 0 when a break is taken. Used for break recommendation.
+    pub pomodoro_session_count: u32,
+    /// Translated notification strings passed from the frontend.
+    #[serde(skip)]
+    pub notif_session_started:  String,
+    #[serde(skip)]
+    pub notif_session_complete: String,
+    #[serde(skip)]
+    pub notif_break_over:       String,
+    #[serde(skip)]
+    pub notif_break_title:      String,
+    #[serde(skip)]
+    pub notif_break_recommend:  String,
 }
 
 impl Default for TimerState {
     fn default() -> Self {
         Self {
-            remaining:          25 * 60,
-            paused:             true,
-            phase:              0,
-            task_active:        false,
-            active_task_name:   None,
-            loop_running:       false,
-            session_duration:   25 * 60,
-            session_start_time: 0,
-            last_activity:      now_secs(),
+            remaining:              25 * 60,
+            paused:                 true,
+            phase:                  0,
+            task_active:            false,
+            active_task_name:       None,
+            loop_running:           false,
+            session_duration:       25 * 60,
+            session_start_time:     0,
+            last_activity:          now_secs(),
+            pomodoro_session_count: 0,
+            notif_session_started:  String::from("Session started! Stay focused."),
+            notif_session_complete: String::from("Session complete! Great work."),
+            notif_break_over:       String::from("Break over! Time to focus."),
+            notif_break_title:      String::from("Code Chrono"),
+            notif_break_recommend:  String::from("You have done 4 sessions! Time for a longer break."),
         }
     }
 }
@@ -59,6 +80,12 @@ pub async fn start_pomodoro(
     handle:   AppHandle,
     task_name: String,
     duration_minutes: Option<u64>,
+    // Translated notification strings from the frontend
+    notif_started:        Option<String>,
+    notif_complete:       Option<String>,
+    notif_break_over:     Option<String>,
+    notif_break_title:    Option<String>,
+    notif_break_recommend: Option<String>,
 ) -> Result<(), String> {
     // Finalize the previous session if one was active
     let previous_session = {
@@ -83,7 +110,7 @@ pub async fn start_pomodoro(
     let should_spawn_loop = {
         let mut timer = state.lock().unwrap();
         let was_running = timer.loop_running;
-        
+
         let duration_secs = duration_minutes.unwrap_or(25) * 60;
         let now = now_secs();
         timer.remaining         = duration_secs;
@@ -95,13 +122,36 @@ pub async fn start_pomodoro(
         timer.task_active       = true;
         timer.active_task_name  = Some(task_name.clone());
         timer.loop_running      = true;
-        
+
+        // Store translated strings for use by the tick loop
+        if let Some(s) = notif_started        { timer.notif_session_started  = s; }
+        if let Some(s) = notif_complete       { timer.notif_session_complete = s; }
+        if let Some(s) = notif_break_over     { timer.notif_break_over       = s; }
+        if let Some(s) = notif_break_title    { timer.notif_break_title      = s; }
+        if let Some(s) = notif_break_recommend { timer.notif_break_recommend = s; }
+
         !was_running
     };
 
     db_state.lock().unwrap().log_action(&task_name, "start", 0, 0).unwrap();
     if should_spawn_loop {
         spawn_tick_loop(Arc::clone(&*state), Arc::clone(&*db_state), handle.clone());
+    }
+
+    // Notify timer-started if the setting is on
+    {
+        let db  = Arc::clone(&*db_state);
+        let msg = state.lock().unwrap().notif_session_started.clone();
+        if bool_setting(&db, "notifications_enabled", true)
+            && bool_setting(&db, "notify_on_timer_start", true)
+        {
+            let _ = handle
+                .notification()
+                .builder()
+                .title("Code Chrono")
+                .body(&msg)
+                .show();
+        }
     }
 
     let snapshot = state.lock().unwrap().clone();
@@ -118,11 +168,14 @@ pub async fn start_break(
     handle:   AppHandle,
     duration_minutes: u64,
     phase: u8,
+    // Translated notification strings — optional, fall back to whatever is already stored
+    notif_break_title:    Option<String>,
+    notif_break_recommend: Option<String>,
 ) -> Result<(), String> {
     let should_spawn_loop = {
         let mut timer = state.lock().unwrap();
         let was_running = timer.loop_running;
-        
+
         let duration_secs = duration_minutes * 60;
         let now = now_secs();
         timer.remaining         = duration_secs;
@@ -134,7 +187,10 @@ pub async fn start_break(
         timer.task_active       = true;
         timer.active_task_name  = Some(String::from("Break"));
         timer.loop_running      = true;
-        
+
+        if let Some(s) = notif_break_title    { timer.notif_break_title     = s; }
+        if let Some(s) = notif_break_recommend { timer.notif_break_recommend = s; }
+
         !was_running
     };
 
@@ -142,6 +198,9 @@ pub async fn start_break(
     if should_spawn_loop {
         spawn_tick_loop(Arc::clone(&*state), Arc::clone(&*db_state), handle.clone());
     }
+
+    // Reset session counter when user takes a break
+    state.lock().unwrap().pomodoro_session_count = 0;
 
     let snapshot = state.lock().unwrap().clone();
     let _ = handle.emit("timer-tick", snapshot);
@@ -294,16 +353,58 @@ fn spawn_tick_loop(
                 timer.task_active  = false;
                 timer.active_task_name = None;
                 timer.loop_running = false;
+
+                // Increment session counter only for work sessions
+                if phase == 0 {
+                    timer.pomodoro_session_count += 1;
+                }
+                let session_count = timer.pomodoro_session_count;
+
                 drop(timer);
 
                 db.lock().unwrap().log_session_complete(&task_name, duration, phase).unwrap_or(());
 
-                let _ = handle
-                    .notification()
-                    .builder()
-                    .title("Code Chrono")
-                    .body(if phase == 0 { "Work session done! 🎉" } else { "Break over! 💪" })
-                    .show();
+                // ── Notifications ────────────────────────────────────────────
+                let db_ref = Arc::clone(&db);
+                let notif_enabled = bool_setting(&db_ref, "notifications_enabled", true);
+
+                if notif_enabled {
+                    // Timer-end notification
+                    if bool_setting(&db_ref, "notify_on_timer_end", true) {
+                        let body = {
+                            let t = state.lock().unwrap();
+                            if phase == 0 {
+                                t.notif_session_complete.clone()
+                            } else {
+                                t.notif_break_over.clone()
+                            }
+                        };
+                        let _ = handle
+                            .notification()
+                            .builder()
+                            .title("Code Chrono")
+                            .body(&body)
+                            .show();
+                    }
+
+                    // Break recommendation after 4 consecutive work sessions
+                    if phase == 0
+                        && session_count > 0
+                        && session_count % 4 == 0
+                        && bool_setting(&db_ref, "notify_break_recommend", true)
+                    {
+                        let (title, body) = {
+                            let t = state.lock().unwrap();
+                            (t.notif_break_title.clone(), t.notif_break_recommend.clone())
+                        };
+                        let _ = handle
+                            .notification()
+                            .builder()
+                            .title(&title)
+                            .body(&body)
+                            .show();
+                    }
+                }
 
                 break;
             }

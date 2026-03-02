@@ -33,8 +33,23 @@ pub fn run() {
             let db = Database::new(db_path.to_str().unwrap())
                 .expect("Failed to open database");
 
-            app.manage(Arc::new(Mutex::new(db)));
+            let db_arc = Arc::new(Mutex::new(db));
+            app.manage(Arc::clone(&db_arc));
             app.manage(Arc::new(Mutex::new(TimerState::default())));
+
+            // Request notification permission on macOS (no-op on Win/Linux)
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                use tauri_plugin_notification::NotificationExt;
+                let _ = handle.notification().request_permission();
+            });
+
+            // Spawn the background IDE / program watcher
+            commands::programs::spawn_program_watcher(
+                Arc::clone(&db_arc),
+                app.handle().clone(),
+            );
+
             Ok(())
         })
         // ── Tauri commands (sub-module paths required by generate_handler!) ─
@@ -80,6 +95,15 @@ pub fn run() {
             commands::sync::preview_sync_jira,
             commands::sync::preview_sync_gitlab,
             commands::sync::import_selected,
+            // Notifications
+            commands::notifications::request_notification_permission,
+            commands::notifications::show_notification,
+            // Programs
+            commands::programs::scan_installed_programs,
+            commands::programs::get_tracked_programs,
+            commands::programs::save_tracked_program,
+            commands::programs::remove_tracked_program,
+            commands::programs::toggle_tracked_program,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

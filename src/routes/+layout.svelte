@@ -8,6 +8,8 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import UpdateChecker from "$lib/components/UpdateChecker.svelte";
   import BreakBanner from "$lib/components/timer/BreakBanner.svelte";
+  import ProgramNotificationModal from "$lib/components/ProgramNotificationModal.svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
   const TOGGLE_PAUSE_SHORTCUT = "CommandOrControl+Shift+P";
 
@@ -15,7 +17,15 @@
     theme.init();
   }
 
+  let platformClass = '';
+
   onMount(async () => {
+    // Detect platform for CSS targeting
+    const platform = typeof navigator !== 'undefined' ? navigator.platform.toLowerCase() : '';
+    if (platform.includes('mac')) platformClass = 'platform-macos';
+    else if (platform.includes('win')) platformClass = 'platform-windows';
+    else platformClass = 'platform-linux';
+
     await initTimerStore();
     await register(TOGGLE_PAUSE_SHORTCUT, async (event) => {
       if (event.state === "Pressed") {
@@ -27,12 +37,19 @@
     });
   });
 
+  // Sync native window background color with the theme
+  $: if (typeof window !== 'undefined' && $theme) {
+    const isDark = $theme === 'dark';
+    const color = isDark ? '#15181e' : '#ffffff';
+    getCurrentWindow().setBackgroundColor(color).catch(() => {});
+  }
+
   onDestroy(() => {
     unregister(TOGGLE_PAUSE_SHORTCUT);
   });
 </script>
 
-<div class="app-layout" data-theme={$theme}>
+<div class="app-layout {platformClass}" data-theme={$theme}>
   <Sidebar />
   <div class="main-container">
     <div class="banner-wrapper">
@@ -43,6 +60,7 @@
 </div>
 
 <UpdateChecker />
+<ProgramNotificationModal />
 
 <style>
   .app-layout {
@@ -73,6 +91,8 @@
   :global(body) {
     margin: 0;
     padding: 0;
+    background: var(--bg-page);
+    color: var(--text);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 </style>

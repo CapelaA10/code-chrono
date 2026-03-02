@@ -7,83 +7,67 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.1.0] — 2026-02-21 · Initial Release 🚀
+## [0.3.0] — 2026-03-01 · Themes, Notifications & IDE Detection
 
-### Features
+### Added
+- New **Debug** page (accessible only in development mode) for testing system integrations.
+- Integrated **Notification Tests** within the Debug page to verify OS-level alerts across all platforms.
+- Complete localization for all debug-related UI strings in English, Portuguese, Spanish, and Greek.
 
-#### ⏱ Pomodoro Timer
-- Customizable session duration (5 – 120 min) via a dropdown selector in the header
-- Global keyboard shortcut `Ctrl+Shift+P` (⌘⇧P on macOS) to pause/resume from any window
-- Idle auto-pause: timer pauses automatically after 2 minutes of inactivity
-- System notification on session completion
-- Real-time tick events pushed from Rust to the frontend (no polling)
+#### Thematic Window Integration
+- The native OS title bar now dynamically matches the program's theme. Whether you're in light or dark mode, the window's top area syncs to the application color automatically.
+- On **macOS**, the title bar is set to `Transparent` mode, allowing the app's background to flow naturally underneath the native traffic light buttons.
+- On **Windows and Linux**, the native border and title area colors are updated via the Tauri Window API to stay in sync with the current theme.
+- The window retains its standard native behavior, including standard button alignment and native dragging.
 
-#### 📋 Task Management
-- Create tasks from the QuickAdd bar (Enter to add, `/` prefix to search)
-- Full edit modal: title, description, priority, project, due date, tags
-- Overdue due dates highlighted in red
-- Priority badge (None / Low / Medium / High)
-- Mark tasks complete / incomplete with a single click
-- Delete tasks instantly (no confirmation dialog)
-- Filter tasks by project, tag, or status via the sidebar
+#### Cross-Platform Notifications
+- New **Notifications** settings card with four toggles: enable notifications globally, notify on session start, notify on session end, and recommend a break after 4 consecutive Pomodoros (based on OMS rest guidelines).
+- The Rust backend checks `notifications_enabled` and each per-event flag before firing any notification, so nothing pops up if you have it turned off.
+- On macOS, notification permission is requested at startup. On Windows and Linux this is a no-op since permission is always granted.
+- New `commands/notifications.rs` with `request_notification_permission` and `show_notification`.
+- `TimerState` now tracks `pomodoro_session_count: u32`, which increments on each completed work session and resets when a break starts.
 
-#### 🗂 Projects & Tags
-- Create projects and tags inline in the sidebar (color picker included)
-- Delete projects/tags with automatic cleanup of task associations
-- Color-coded project folders and tag badges
+#### Program / IDE Detection
+- New **Program Detection** settings card. Click **Scan for IDEs** to find installed developer tools on your machine:
+  - macOS: scans `.app` bundles in `/Applications` and `~/Applications`
+  - Linux: reads `.desktop` files from XDG app directories
+  - Windows: queries uninstall registry keys
+  - Results are matched against 30+ known tools including VS Code, Cursor, all JetBrains IDEs, Xcode, Android Studio, Zed, Neovim, Sublime Text, Postman, and more.
+- Detected IDEs are saved to a `tracked_programs` SQLite table. Duplicates are skipped automatically.
+- Each tracked program has its own enable/disable toggle and a delete button.
+- You can also add any program manually via a file-picker dialog.
+- A background watcher (`spawn_program_watcher`) uses `sysinfo` to poll running processes every 5 seconds. When a tracked program is detected, it emits a `program-opened` event to the frontend. There is a 15-minute cooldown per program to avoid repeated prompts.
+- New `ProgramNotificationModal.svelte` slides in from the bottom-right when a tracked program opens. It shows a dropdown of your 20 most recent tasks and lets you start tracking immediately.
 
-#### 🔗 Integrations
-- **GitHub** — sync open issues; optionally target a single `owner/repo`
-- **GitLab** — sync issues assigned to you (self-hosted or gitlab.com)
-- **Jira** — sync issues assigned to you via Atlassian API token
-- Inline sync status (spinner → ✓ success / ✗ error with message) — no alert dialogs
-- Source badge on synced tasks (GitHub / GitLab / Jira)
+#### Localization
+- All new UI strings are translated into all 5 supported languages: English, European Portuguese, Brazilian Portuguese, Spanish, and Greek.
+- Because `StringKey = keyof typeof en`, missing translations are caught at build time as TypeScript errors.
+- Notification body text is now fully translated. The frontend passes already-translated strings from the active locale to the Rust backend when starting a session or break, so every system notification appears in the user's chosen language.
+- Flag emojis in the language selector (🇬🇧 🇵🇹 🇧🇷 🇪🇸 🇬🇷) render correctly on all supported platforms. Tauri uses a Chromium-based WebView on Windows (WebView2), WKWebView on macOS, and WebKitGTK on Linux, all of which handle flag and other emoji sequences natively without any OS font dependency.
 
-#### 📊 Statistics
-- Time tracked per task with relative bar chart
-- Daily breakdown grouped by date
-- Filter by Today / This Week / This Month / Custom range
-- Export session records to CSV (with automatic blob URL cleanup)
+### New Files
 
-#### ⚙️ Settings
-- Per-integration configuration: tokens, domain, host, GitHub repo
-- Idle detection threshold (minutes)
-- All settings persisted in local SQLite (no cloud, no accounts)
-
-#### 🎨 UI & Theming
-- Light and dark themes, toggleable from the header
-- Smooth transitions, hover micro-animations
-- Fully keyboard navigable modals (Esc to close, Ctrl+Enter to save)
-
-### Architecture
-
-#### Frontend (`src/`)
-| Path | Responsibility |
+#### Frontend
+| File | What it does |
 |---|---|
-| `lib/utils/format.ts` | Shared `formatTime`, `formatDuration`, `formatDate` utilities |
-| `lib/types/index.ts` | Single source of truth for all TypeScript interfaces |
-| `lib/stores/tasks.ts` | Reactive stores + `refreshAll()` helper |
-| `components/timer/TimerWidget.svelte` | Self-contained Pomodoro widget |
-| `components/task/TaskEditModal.svelte` | Reusable task edit modal |
-| `components/sidebar/InlineCreateForm.svelte` | Reusable color-picker + name form |
+| `SettingsNotifications.svelte` | Notification preferences card |
+| `SettingsPrograms.svelte` | Program detection settings card |
+| `ProgramNotificationModal.svelte` | Task-tracking prompt shown on program open |
 
-#### Backend (`src-tauri/src/`)
-| Path | Responsibility |
+#### Backend
+| File | What it does |
 |---|---|
-| `commands/timer.rs` | Timer state, session loop, idle detection |
-| `commands/tasks.rs` | Task CRUD |
-| `commands/projects.rs` | Project CRUD |
-| `commands/tags.rs` | Tag CRUD |
-| `commands/settings.rs` | Key-value settings |
-| `commands/stats.rs` | Session statistics queries |
-| `commands/data.rs` | CSV import/export, database reset |
-| `commands/sync.rs` | GitHub, GitLab, Jira sync with shared helpers |
-| `database/models.rs` | Domain structs (no logic) |
-| `database/sessions.rs` | Pomodoro session log |
-| `database/tasks.rs` | Task queries + tag linking |
-| `database/projects.rs` | Project queries |
-| `database/tags.rs` | Tag queries |
-| `database/settings.rs` | Settings get/set |
+| `commands/notifications.rs` | Permission request and show_notification command |
+| `commands/programs.rs` | Cross-platform IDE scan, CRUD, and background watcher |
+| `database/programs.rs` | CRUD for the tracked_programs SQLite table |
+
+### Struct Updates
+- `TimerState` gains `pomodoro_session_count: u32` to track consecutive work sessions.
+
+### New Dependencies
+| Crate | Version | Purpose |
+|---|---|---|
+| `sysinfo` | 0.33 | Cross-platform process enumeration |
 
 ---
 
@@ -91,124 +75,174 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-#### 🗺️ Localization (i18n)
-- Added full interface translation support.
-- Available languages: English 🇬🇧, European Portuguese 🇵🇹, Brazilian Portuguese 🇧🇷, Spanish 🇪🇸, and Greek 🇬🇷.
-- Language switcher available in Settings -> Appearance.
+#### Localization (i18n)
+- Full interface translation support added.
+- Available languages: English, European Portuguese, Brazilian Portuguese, Spanish, and Greek.
+- Language switcher available in Settings > Appearance.
 
-#### 📅 Calendar View
-- New dedicated `/calendar` page to view tasks based on their due dates.
-- Monthly grid view displaying up to 3 task pills per day with color-coded overdue highlighting.
-- Left sidebar navigation link added under "All Tasks".
+#### Calendar View
+- New `/calendar` page to view tasks by due date.
+- Monthly grid showing up to 3 task pills per day with overdue highlighting.
+- Navigation link added to the left sidebar under "All Tasks".
 
-#### ☕ Break Timer
-- Pomodoro sessions now seamlessly transition into breaks.
-- Unobtrusive break banner appears when a session finishes, offering a "Short Break" (5m) or "Long Break" (15m).
-- Break phases explicitly tracked in the Rust backend state.
+#### Break Timer
+- Pomodoro sessions now transition into breaks automatically.
+- A break banner appears after each session, offering a Short Break (5 min) or Long Break (15 min).
+- Break phases are tracked in the Rust backend state.
 
-#### 📈 Enhanced Statistics
-- **Activity Heatmap**: 12-week GitHub-style contribution grid charting daily time logged.
-- **Daily Totals**: Scaled SVG bar chart visualizing the history of tracked time.
-- Overview toggle ("Charts" vs "Details") integrated into the main Statistics page.
+#### Statistics
+- **Activity Heatmap**: 12-week GitHub-style contribution grid for daily time logged.
+- **Daily Totals**: scaled SVG bar chart showing tracked time history.
+- Toggle between Charts and Details views on the Statistics page.
 
-#### 📋 Task Templates
-- Save repetitive configurations as reusable templates directly from the Task Edit modal.
-- Apply templates with a single click via the new Template Picker modal.
-- Templates are stored securely offline in `localStorage`.
+#### Task Templates
+- Save any task configuration as a reusable template from the Task Edit modal.
+- Apply templates with one click via the Template Picker modal.
+- Templates are stored offline in `localStorage`.
 
-#### 🔄 Automatic Updates
-- Bundled **@tauri-apps/plugin-updater** for completely silent background updates.
-- App checks for updates silently on launch. If found, automatically downloads them.
-- Beautiful unobtrusive pill toast appears bottom-right while downloading, then turns green to prompt restart when ready.
-- **Security**: Updates are now signed with Minisign and verified via public key in `tauri.conf.json`, ensuring secure and tamper-proof delivery.
+#### Automatic Updates
+- Integrated `@tauri-apps/plugin-updater` for silent background updates.
+- App checks for updates on launch and downloads them automatically.
+- A small pill toast in the bottom-right shows download progress and prompts for restart when ready.
+- Updates are signed with Minisign and verified via a public key in `tauri.conf.json`.
 
-#### 🎨 UI/UX Theme Unification & Polish
-- Systematic sweep of all components to remove hardcoded hex colors (`#10b981`, `#ef4444`, `#2563eb`) and `rgba` values.
-- Implemented `color-mix(in srgb, ...)` for translucent hover states and pill backgrounds to natively support dynamic light/dark themes.
-- Unified drop shadows across the app (modals, toasts, dropdowns, and date pickers) leveraging global `--shadow`, `--shadow-sm`, and `--shadow-lg` properties for depth consistency.
-- Standardized interactive buttons globally to use `--transition` and a relative filter-based hover to respond dynamically to their base color inputs.
+#### UI and Theme Improvements
+- Removed all hardcoded hex colors and replaced them with CSS variables.
+- Used `color-mix(in srgb, ...)` for translucent hover states that work correctly in both light and dark themes.
+- Unified drop shadows across modals, toasts, dropdowns, and date pickers using global shadow tokens.
+- Interactive buttons now use a filter-based hover so they respond correctly regardless of their base color.
 
-#### ℹ️ About Dialog
-- New **About** button in the sidebar footer (below Settings)
-- Opens a personal story dialog explaining why Code Chrono was created: Pedro's frustration with forgetting what he worked on, the evolution from a personal tracker to a multi-repo integration tool, the Tauri + AI build story, and the open-source spirit
-- Links to GitHub and credits Pedro as the author
+#### About Dialog
+- New **About** button in the sidebar footer.
+- Opens a dialog with Pedro's personal story: where the idea came from, how the project evolved, and why it's open source.
+- Links to GitHub and credits Pedro as the author.
 
-#### 🔗 Integrations — Selective Issue Import
-- **Compact right-side drawer** opens when clicking a platform in the sidebar (slides in, 360 px wide)
-- Fetches issues without importing; issues already in the DB are greyed out with a check mark
-- **Filter bar**: search by title, filter by project and label, toggle to hide already-imported issues
-- **Select / deselect individual issues** or use "Select All" for the current filtered view
-- **Optional label import**: a checkbox brings platform labels in as local tags
-- **Auto-import projects**: when an issue has a project/repo, a matching local project is automatically created on first import
-- External-link (↗) visible on hover per row — keeps the list uncluttered
+#### Integrations: Selective Issue Import
+- A compact right-side drawer opens when you click a platform in the sidebar.
+- Issues that are already in the database are shown with a check mark and greyed out.
+- Filter bar with search, project/label selects, and a toggle to hide already-imported issues.
+- Select individual issues or use "Select All" for the current filtered view.
+- Optional: import platform labels as local tags.
+- Optional: auto-create a local project when an issue has an associated project or repo.
 
-#### ⚙️ Settings — Auto-import Projects Toggle
-- New **"Auto-import Projects"** toggle in Productivity settings (default: on)
-- When enabled, importing any issue that has an associated project will automatically create a matching local project (and use it if it already exists — no duplicates)
-- The import drawer reads this setting on open as its default; the user can override per-import session
+#### Settings: Auto-import Projects Toggle
+- New **Auto-import Projects** toggle in Productivity settings (on by default).
+- When enabled, importing an issue that has an associated project will automatically create or reuse a matching local project.
 
-#### 🗂 Task View — Filter Bar
-- New **filter bar** on the main All Tasks view with dropdowns for Project, Tag, and Status
-- Active filters shown as **dismissible pills** (click the × on a pill to remove that one filter)
-- "Clear" button resets all active filters at once
-- Filter bar only renders dropdowns for data that actually exists (no empty project list when no projects)
+#### Task View: Filter Bar
+- New filter bar on the main task view with dropdowns for Project, Tag, and Status.
+- Active filters shown as dismissible pills. Click the × on a pill to remove that filter.
+- A "Clear" button resets all filters at once.
+- Dropdowns only render if the relevant data actually exists.
 
 ### Changed
 
-#### ⚙️ Settings Page — Refactored into Components
-The monolithic 868-line `settings/+page.svelte` has been split into focused sub-components:
-- `SettingsAppearance.svelte` — compact inline light/dark pill toggle (no longer a full-width switcher card)
-- `SettingsProductivity.svelte` — hotkey, idle threshold, timer duration, **auto-import projects** toggle
-- `SettingsIntegrations.svelte` — GitHub / GitLab / Jira credential forms
-- `SettingsDataManagement.svelte` — CSV export / import
+#### Settings Page
+The original 868-line settings page was split into focused components:
+- `SettingsAppearance.svelte` — light/dark toggle
+- `SettingsProductivity.svelte` — hotkey, idle threshold, timer duration, auto-import projects
+- `SettingsIntegrations.svelte` — GitHub, GitLab, and Jira credential forms
+- `SettingsDataManagement.svelte` — CSV export and import
 - `SettingsDangerZone.svelte` — database reset
-- `settings/+page.svelte` is now a thin orchestrator (~60 lines)
+- `settings/+page.svelte` is now about 60 lines
 
-#### 🗂 Import Drawer — Refactored into Sub-components
-The monolithic `SyncPreviewModal.svelte` (456 lines) has been split into:
-- `SyncDrawerHeader.svelte` — source badge, title, count badges, close button
-- `SyncFilterBar.svelte` — search, project/label selects, hide-imported toggle, refresh
-- `SyncIssueList.svelte` — select-all bar + scrollable issue rows
-- `SyncDrawerFooter.svelte` — import-option checkboxes, error display, Cancel/Import buttons
-- `syncTypes.ts` — shared `ExternalTask` interface (single source of truth)
-- `SyncPreviewModal.svelte` is now a thin orchestrator (~170 lines of pure logic + shell CSS)
+#### Import Drawer
+The original 456-line `SyncPreviewModal.svelte` was split into:
+- `SyncDrawerHeader.svelte`
+- `SyncFilterBar.svelte`
+- `SyncIssueList.svelte`
+- `SyncDrawerFooter.svelte`
+- `syncTypes.ts` for the shared `ExternalTask` interface
 
-#### 🔄 Integration Architecture
-- `integrations.rs` — `ExternalTask` now carries `labels`, `project`, and `already_imported` fields
-- `commands/sync.rs` — `import_selected` now accepts `import_projects: bool`; auto-creates local projects from issue metadata
-- `database/projects.rs` — new `find_or_create(name)` helper; idempotent project creation
-- `database/tasks.rs` — new `is_imported(external_id, source)` helper for fast duplicate detection
-- Per-page limit raised from 50 → 100 issues per sync across all platforms
-- Legacy `sync_github/jira/gitlab` commands kept for backwards compatibility
-
-### Architecture — New Files
-
-#### Frontend (`src/`)
-| Path | Responsibility |
-|---|---|
-| `lib/components/integrations/syncTypes.ts` | Shared `ExternalTask` TypeScript interface |
-| `lib/components/integrations/SyncPreviewModal.svelte` | Orchestrator: state + async logic |
-| `lib/components/integrations/SyncDrawerHeader.svelte` | Drawer header zone |
-| `lib/components/integrations/SyncFilterBar.svelte` | Search + filter dropdowns |
-| `lib/components/integrations/SyncIssueList.svelte` | Select-all bar + issue rows |
-| `lib/components/integrations/SyncDrawerFooter.svelte` | Import options + action buttons |
-| `lib/components/task/TaskFilterBar.svelte` | Project / tag / status filter bar |
-| `lib/components/settings/SettingsAppearance.svelte` | Compact appearance card |
-| `lib/components/settings/SettingsProductivity.svelte` | Productivity card (+ auto-import projects toggle) |
-| `lib/components/settings/SettingsIntegrations.svelte` | Integrations card |
-| `lib/components/settings/SettingsDataManagement.svelte` | Data management card |
-| `lib/components/settings/SettingsDangerZone.svelte` | Danger zone card |
-
-#### Backend (`src-tauri/src/`)
-| Path | Change |
-|---|---|
-| `integrations.rs` | `ExternalTask` extended with `labels`, `project`, `already_imported` |
-| `commands/sync.rs` | Added `preview_sync_*`, `import_selected` (with `import_projects` param) |
-| `database/projects.rs` | Added `find_or_create()` — idempotent project creation |
-| `database/tasks.rs` | Added `is_imported()` helper |
+#### Integration Architecture
+- `ExternalTask` now carries `labels`, `project`, and `already_imported` fields.
+- `import_selected` accepts `import_projects: bool` and auto-creates local projects from issue metadata.
+- New `find_or_create(name)` in `database/projects.rs` for idempotent project creation.
+- New `is_imported(external_id, source)` in `database/tasks.rs` for fast duplicate detection.
+- Per-page issue limit raised from 50 to 100 across all platforms.
 
 ### Struct Updates
-- **`TimerState`**: Added `phase: number` (0 = work session, 1 = short break, 2 = long break) to orchestrate Pomodoro cycles.
+- `TimerState` gains `phase: number` (0 = work, 1 = short break, 2 = long break) to orchestrate Pomodoro cycles.
+
+---
+
+## [0.1.0] — 2026-02-21 · Initial Release
+
+### Added
+
+#### Pomodoro Timer
+- Customizable session duration (5 to 120 min) via a dropdown in the header.
+- Global keyboard shortcut `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) to pause/resume from any window.
+- Idle auto-pause after 2 minutes of inactivity.
+- System notification on session completion.
+- Real-time tick events pushed from Rust to the frontend with no polling.
+
+#### Task Management
+- Create tasks from the QuickAdd bar (Enter to add, `/` prefix to search).
+- Full edit modal with title, description, priority, project, due date, and tags.
+- Overdue dates highlighted in red.
+- Priority badge (None, Low, Medium, High).
+- Mark tasks complete or incomplete with one click.
+- Delete tasks instantly.
+- Filter by project, tag, or status via the sidebar.
+
+#### Projects & Tags
+- Create projects and tags inline in the sidebar with a color picker.
+- Delete projects or tags with automatic cleanup of task associations.
+- Color-coded folders and badges.
+
+#### Integrations
+- **GitHub**: sync open issues, optionally scoped to a single `owner/repo`.
+- **GitLab**: sync issues assigned to you (self-hosted or gitlab.com).
+- **Jira**: sync issues assigned to you via an Atlassian API token.
+- Inline sync status that shows a spinner, then success or error. No alert dialogs.
+- Source badge on synced tasks (GitHub, GitLab, or Jira).
+
+#### Statistics
+- Time tracked per task with a relative bar chart.
+- Daily breakdown grouped by date.
+- Filter by Today, This Week, This Month, or a custom range.
+- Export session records to CSV.
+
+#### Settings
+- Per-integration config: tokens, domain, host, GitHub repo path.
+- Idle detection threshold in minutes.
+- All settings stored in local SQLite.
+
+#### UI and Theming
+- Light and dark themes, toggled from the header.
+- Smooth transitions and hover micro-animations.
+- Keyboard-navigable modals (Esc to close, Ctrl+Enter to save).
+
+### Architecture
+
+#### Frontend
+| File | What it does |
+|---|---|
+| `lib/utils/format.ts` | Shared formatTime, formatDuration, formatDate utilities |
+| `lib/types/index.ts` | Single source of truth for all TypeScript interfaces |
+| `lib/stores/tasks.ts` | Reactive stores and refreshAll helper |
+| `components/timer/TimerWidget.svelte` | Self-contained Pomodoro widget |
+| `components/task/TaskEditModal.svelte` | Reusable task edit modal |
+| `components/sidebar/InlineCreateForm.svelte` | Reusable color-picker and name form |
+
+#### Backend
+| File | What it does |
+|---|---|
+| `commands/timer.rs` | Timer state, session loop, idle detection |
+| `commands/tasks.rs` | Task CRUD |
+| `commands/projects.rs` | Project CRUD |
+| `commands/tags.rs` | Tag CRUD |
+| `commands/settings.rs` | Key-value settings |
+| `commands/stats.rs` | Session statistics queries |
+| `commands/data.rs` | CSV import/export and database reset |
+| `commands/sync.rs` | GitHub, GitLab, and Jira sync |
+| `database/models.rs` | Domain structs |
+| `database/sessions.rs` | Pomodoro session log |
+| `database/tasks.rs` | Task queries and tag linking |
+| `database/projects.rs` | Project queries |
+| `database/tags.rs` | Tag queries |
+| `database/settings.rs` | Settings get/set |
 
 ---
 
